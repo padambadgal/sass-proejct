@@ -1,11 +1,14 @@
 import express from 'express';
-import {register, login} from '../controllers/userController.js';
+import {register, login, logout, getMe} from '../controllers/userController.js';
+import { protect } from '../middleware/JWTAuthentication.js';
 
 const router = express.Router();
 
-router.post('/auth/register', register);
-router.post('/auth/login', login);
+router.post('/register', register);
+router.post('/login', login);
+router.post('/logout',protect, logout);
+
+
 
 export default router;
-
 
