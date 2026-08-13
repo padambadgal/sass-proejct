@@ -1,12 +1,12 @@
 import express from 'express';
 import connectDB from './config/db.js';
-import dotenv from 'dotenv';
+import 'dotenv/config';
 import cookieParser from 'cookie-parser';
-// import cors from 'cors';
-dotenv.config();
+import cors from 'cors';
 
 
 import userRouter from './routes/userRouter.js';
+import subscriptionRouter from './routes/subscriptionRouter.js';
 import { errorHandler } from './middleware/errorMiddleware.js';
 
 
@@ -15,16 +15,26 @@ const PORT = process.env.PORT || 3000;
 
 connectDB();
 
+app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
+
 app.use(express.json());
 app.use(cookieParser());
-// app.use(cors({
-//     origin: 'http://localhost:5173', // Replace with your frontend URL
-//     credentials: true, // Allow cookies to be sent
-// }));
+app.use(cors({
+    origin: 'http://localhost:5173', // Replace with your frontend URL
+    credentials: true, // Allow cookies to be sent
+}));
 
 app.use('/api/auth', userRouter);
+app.use('/api/subscriptions', subscriptionRouter);
 
+app.use((req, res, next) => {
+    res.status(404).json({
+        success: false,
+        message: `Route ${req.originalUrl} not found`,
+    });
+});
 
+// ✅ 7. Global Error Handler (MUST be the last middleware)
 app.use(errorHandler);
 
 

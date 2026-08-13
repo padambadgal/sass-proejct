@@ -42,83 +42,69 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
-
-        // 1. Check required fields
         if (!email || !password) {
             return res.status(400).json({
-                message: "Please provide all required fields"
+                success: false,
+                message: 'Please provide email and password',
             });
         }
 
-        // 2. Find user
-        const existingUser = await User.findOne({ email });
-
+        const existingUser = await User.findOne({ email }).select('+password');
         if (!existingUser) {
-            return res.status(400).json({
-                message: "Invalid email or password"
-            });
+            return res.status(401).json({ success: false, message: 'Invalid email or password' });
         }
 
-        // 3. Check password length
-        if (password.length < 6) {
-            return res.status(400).json({
-                message: "Password must be at least 6 characters long"
-            });
+        // Validate that the stored password is a proper bcrypt hash
+        if (typeof existingUser.password !== 'string' || !existingUser.password.startsWith('$2')) {
+            console.error(`Invalid password hash for user ${email}:`, existingUser.password);
+            return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
 
-        // 4. Compare password
-        const isPasswordCorrect = await bcrypt.compare(
-            password,
-            existingUser.password
-        );
-
+        const isPasswordCorrect = await bcrypt.compare(password, existingUser.password);
         if (!isPasswordCorrect) {
-            return res.status(400).json({
-                message: "Invalid email or password"
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid email or password'
             });
         }
 
-        // 5. Create JWT token
         const token = jwt.sign(
             { id: existingUser._id },
             process.env.JWT_SECRET,
-            { expiresIn: "7d" }
+            { expiresIn: '7d' }
         );
 
-        // 6. Send response
         return res.status(200).json({
             success: true,
-            message: "Login successful",
+            message: 'Login successful',
             data: {
                 id: existingUser._id,
                 email: existingUser.email,
                 name: existingUser.name,
-                token
-            }
+                token,
+            },
         });
-
     } catch (error) {
-        console.error("Login error:", error);
-
+        console.error('Login error:', error);
         return res.status(500).json({
             success: false,
-            message: "Server error"
+            message: 'Server error',
         });
     }
 };
 
 export const logout = (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Logged out successfully',
-  });
+    res.status(200).json({
+        success: true,
+        message: 'Logged out successfully',
+    });
 };
 
 
 export const getMe = async (req, res) => {
-  // req.user is set by the protect middleware
-  res.status(200).json({
-    success: true,
-    data: req.user,
-  });
+    // req.user is set by the protect middleware
+    res.status(200).json({
+        success: true,
+        data: req.user,
+    });
 };
