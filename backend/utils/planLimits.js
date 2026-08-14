@@ -1,6 +1,6 @@
 import { PLANS, getPlan } from '../config/plans.js';
 import Subscription from '../models/Subscription.js';
-// import Business from '../models/Business.js';
+import Business from '../models/Business.js';
 // import Service from '../models/Service.js';
 // import Staff from '../models/Staff.js';
 // import Booking from '../models/Booking.js';
@@ -25,33 +25,33 @@ export const getActiveSubscription = async (userId) => {
 };
 
 // Get plan limits for a user (throws error if no active subscription)
-// export const getPlanLimitsForUser = async (userId) => {
-//   const subscription = await getActiveSubscription(userId);
-//   if (!subscription) {
-//     throw new Error('No active subscription found');
-//   }
-//   const plan = getPlan(subscription.plan);
-//   if (!plan) {
-//     throw new Error('Invalid plan configuration');
-//   }
-//   return {
-//     plan,
-//     subscription,
-//     limits: {
-//       maxBusinesses: toSafeNumber(plan.maxBusinesses),
-//       maxServices: toSafeNumber(plan.maxServices),
-//       maxStaff: toSafeNumber(plan.maxStaff),
-//       maxAppointmentsPerDay: toSafeNumber(plan.maxAppointmentsPerDay),
-//     },
-//   };
-// };
+export const getPlanLimitsForUser = async (userId) => {
+  const subscription = await getActiveSubscription(userId);
+  if (!subscription) {
+    throw new Error('No active subscription found');
+  }
+  const plan = getPlan(subscription.plan);
+  if (!plan) {
+    throw new Error('Invalid plan configuration');
+  }
+  return {
+    plan,
+    subscription,
+    limits: {
+      maxBusinesses: toSafeNumber(plan.maxBusinesses),
+      maxServices: toSafeNumber(plan.maxServices),
+      maxStaff: toSafeNumber(plan.maxStaff),
+      maxAppointmentsPerDay: toSafeNumber(plan.maxAppointmentsPerDay),
+    },
+  };
+};
 
 // // Check business limit
-// export const canCreateBusiness = async (userId) => {
-//   const { limits } = await getPlanLimitsForUser(userId);
-//   const businessCount = await Business.countDocuments({ ownerId: userId });
-//   return businessCount < limits.maxBusinesses;
-// };
+export const canCreateBusiness = async (userId) => {
+  const { limits } = await getPlanLimitsForUser(userId);
+  const businessCount = await Business.countDocuments({ ownerId: userId, isActive: true  });
+  return businessCount < limits.maxBusinesses;
+};
 
 // // Check service limit for a business
 // export const canCreateService = async (businessId) => {

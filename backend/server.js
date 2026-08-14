@@ -8,6 +8,7 @@ import cors from 'cors';
 import userRouter from './routes/userRouter.js';
 import subscriptionRouter from './routes/subscriptionRouter.js';
 import paymentRouter from './routes/paymentRoutes.js';
+import businessRoutes from './routes/businessRoutes.js'; // NEW
 import { errorHandler } from './middleware/errorMiddleware.js';
 
 
@@ -28,6 +29,9 @@ app.use(cors({
 app.use('/api/auth', userRouter);
 app.use('/api/subscriptions', subscriptionRouter);
 app.use('/api/payments', paymentRouter);
+app.use('/api/business', businessRoutes); 
+
+
 app.use((req, res, next) => {
     res.status(404).json({
         success: false,
