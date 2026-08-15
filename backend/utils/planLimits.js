@@ -1,7 +1,7 @@
 import { PLANS, getPlan } from '../config/plans.js';
 import Subscription from '../models/Subscription.js';
 import Business from '../models/Business.js';
-// import Service from '../models/Service.js';
+import Service from '../models/Service.js';
 // import Staff from '../models/Staff.js';
 // import Booking from '../models/Booking.js';
 
@@ -54,14 +54,14 @@ export const canCreateBusiness = async (userId) => {
 };
 
 // // Check service limit for a business
-// export const canCreateService = async (businessId) => {
-//   // Find business owner via business
-//   const business = await Business.findById(businessId);
-//   if (!business) throw new Error('Business not found');
-//   const { limits } = await getPlanLimitsForUser(business.ownerId);
-//   const serviceCount = await Service.countDocuments({ businessId });
-//   return serviceCount < limits.maxServices;
-// };
+export const canCreateService = async (businessId) => {
+  // Find business owner via business
+  const business = await Business.findById(businessId);
+  if (!business) throw new Error('Business not found');
+  const { limits } = await getPlanLimitsForUser(business.ownerId);
+  const serviceCount = await Service.countDocuments({ businessId });
+  return serviceCount < limits.maxServices;
+};
 
 // // Check staff limit for a business
 // export const canCreateStaff = async (businessId) => {
