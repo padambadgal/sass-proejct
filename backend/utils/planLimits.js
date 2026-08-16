@@ -2,7 +2,7 @@ import { PLANS, getPlan } from '../config/plans.js';
 import Subscription from '../models/Subscription.js';
 import Business from '../models/Business.js';
 import Service from '../models/Service.js';
-// import Staff from '../models/Staff.js';
+import Staff from '../models/Staff.js';
 // import Booking from '../models/Booking.js';
 
 // Helper to safely handle Infinity
@@ -64,13 +64,13 @@ export const canCreateService = async (businessId) => {
 };
 
 // // Check staff limit for a business
-// export const canCreateStaff = async (businessId) => {
-//   const business = await Business.findById(businessId);
-//   if (!business) throw new Error('Business not found');
-//   const { limits } = await getPlanLimitsForUser(business.ownerId);
-//   const staffCount = await Staff.countDocuments({ businessId });
-//   return staffCount < limits.maxStaff;
-// };
+export const canCreateStaff = async (businessId) => {
+  const business = await Business.findById(businessId);
+  if (!business) throw new Error('Business not found');
+  const { limits } = await getPlanLimitsForUser(business.ownerId);
+  const staffCount = await Staff.countDocuments({ businessId });
+  return staffCount < limits.maxStaff;
+};
 
 // // Check daily appointment limit for a business (on a specific date)
 // export const canCreateAppointment = async (businessId, date) => {

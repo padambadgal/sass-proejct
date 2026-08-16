@@ -10,6 +10,7 @@ import subscriptionRouter from './routes/subscriptionRouter.js';
 import paymentRouter from './routes/paymentRoutes.js';
 import businessRoutes from './routes/businessRoutes.js'; 
 import serviceRoutes from './routes/serviceRoutes.js';
+import staffRoutes from './routes/staffRoutes.js';
 import { errorHandler } from './middleware/errorMiddleware.js';
 
 
@@ -32,6 +33,8 @@ app.use('/api/subscriptions', subscriptionRouter);
 app.use('/api/payments', paymentRouter);
 app.use('/api/business', businessRoutes); 
 app.use('/api/services', serviceRoutes)
+app.use('/api/staff', staffRoutes);
+
 
 
 app.use((req, res, next) => {

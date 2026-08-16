@@ -1,4 +1,5 @@
 import express from 'express';
+
 import {
   createService,
   getServices,
@@ -6,23 +7,25 @@ import {
   updateService,
   deleteService,
 } from '../controllers/serviceController.js';
+
 import { protect } from '../middleware/authMiddleware.js';
 import { requireActiveSubscription } from '../middleware/subscriptionMiddleware.js';
 
 const router = express.Router();
 
-// All routes require authentication and active subscription
-router.use(protect);
-router.use(requireActiveSubscription);
+// GET /api/services
+router.get('/',  protect, requireActiveSubscription, getServices);
 
-// Routes
-router.route('/')
-  .get(getServices)        // GET /api/services?businessId=xxx
-  .post(createService);    // POST /api/services
+// POST /api/services
+router.post('/', protect, requireActiveSubscription, createService);
 
-router.route('/:id')
-  .get(getServiceById)     // GET /api/services/:id
-  .patch(updateService)    // PATCH /api/services/:id
-  .delete(deleteService);  // DELETE /api/services/:id
+// GET /api/services/:id
+router.get('/:id', protect, requireActiveSubscription, getServiceById);
+
+// PATCH /api/services/:id
+router.patch('/:id', protect, requireActiveSubscription, updateService);
+
+// DELETE /api/services/:id
+router.delete('/:id', protect, requireActiveSubscription, deleteService);
 
 export default router;
