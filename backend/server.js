@@ -11,6 +11,9 @@ import paymentRouter from './routes/paymentRoutes.js';
 import businessRoutes from './routes/businessRoutes.js'; 
 import serviceRoutes from './routes/serviceRoutes.js';
 import staffRoutes from './routes/staffRoutes.js';
+import availabilityRoutes from './routes/availabilityRoutes.js';
+import slotRoutes from './routes/slotRoutes.js';
+
 import { errorHandler } from './middleware/errorMiddleware.js';
 
 
@@ -34,6 +37,8 @@ app.use('/api/payments', paymentRouter);
 app.use('/api/business', businessRoutes); 
 app.use('/api/services', serviceRoutes)
 app.use('/api/staff', staffRoutes);
+app.use('/api/availability', availabilityRoutes);
+app.use('/api/slots', slotRoutes);
 
 
 
