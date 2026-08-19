@@ -1,5 +1,5 @@
 import Availability from '../models/Availability.js';
-// import Booking from '../models/Booking.js';
+import Booking from '../models/Booking.js';
 import Service from '../models/Service.js';
 import Business from '../models/Business.js';
 
@@ -51,12 +51,13 @@ export const generateAvailableSlots = async (businessId, serviceId, dateStr) => 
   }
 
   // 3. Get day of week (0 = Sunday, 1 = Monday, ...)
-  const dateObj = new Date(dateStr + 'T00:00:00'); // avoid timezone issues
-  const dayOfWeek = dateObj.getDay();
+  const dateObj = new Date(dateStr + 'T00:00:00Z'); // force UTC to avoid timezone issues
+  const dayOfWeek = dateObj.getUTCDay();
 
   // 4. Find availability for that business and day
   const availability = await Availability.findOne({ businessId, dayOfWeek });
   if (!availability || !availability.isOpen) {
+    console.log('DEBUG: No availability or closed. availability:', availability);
     return []; // Business is closed on this day
   }
 
@@ -71,41 +72,36 @@ export const generateAvailableSlots = async (businessId, serviceId, dateStr) => 
 
   // 6. Fetch existing bookings for this business on this date that overlap with working hours
   // We only consider bookings that are pending or confirmed (not cancelled/no-show)
-  const startOfDay = new Date(dateStr + 'T00:00:00');
-  const endOfDay = new Date(dateStr + 'T23:59:59.999');
+  const startOfDay = new Date(dateStr + 'T00:00:00Z');
+  const endOfDay = new Date(dateStr + 'T23:59:59.999Z');
 
   const existingBookings = await Booking.find({
     businessId,
     date: { $gte: startOfDay, $lte: endOfDay },
     status: { $in: ['pending', 'confirmed'] },
   }).lean();
+  console.log('DEBUG existingBookings:', existingBookings.map(b => ({ startTime: b.startTime, endTime: b.endTime, status: b.status })));
 
   // Convert bookings to intervals in minutes (relative to midnight)
   const bookingIntervals = existingBookings.map(booking => {
     const start = timeToMinutes(booking.startTime);
-    const duration = booking.duration || 30; // fallback, but we should store duration in booking
-    return { start, end: start + duration };
+    const end = timeToMinutes(booking.endTime);
+    return { start, end };
   });
 
   // 7. Generate candidate slots
-  // We'll generate slots starting at every 15 minutes within the working window,
-  // but we can also set a configurable step (e.g., service duration? But often you want 15-min increments).
-  const stepMinutes = 15; // fixed step for simplicity
+  // We'll generate slots starting at every 15 minutes within the working window
+  const stepMinutes = 15;
   const slots = [];
 
-  // Candidate start times from startMinutes to (endMinutes - duration) inclusive
   let candidateStart = startMinutes;
   while (candidateStart + duration <= endMinutes) {
-    // Check if candidateStart falls within any break
-    const inBreak = breakIntervals.some(br => 
-      candidateStart >= br.start && candidateStart < br.end
-    );
-    // Also check if the appointment would overlap a break (i.e., the duration spans into a break)
-    const overlapsBreak = breakIntervals.some(br => 
+    // Check if the appointment would overlap a break
+    const overlapsBreak = breakIntervals.some(br =>
       intervalsOverlap(candidateStart, candidateStart + duration, br.start, br.end)
     );
 
-    if (!inBreak && !overlapsBreak) {
+    if (!overlapsBreak) {
       // Check if this slot overlaps any existing booking
       const overlapsBooking = bookingIntervals.some(book =>
         intervalsOverlap(candidateStart, candidateStart + duration, book.start, book.end)
@@ -117,5 +113,14 @@ export const generateAvailableSlots = async (businessId, serviceId, dateStr) => 
     candidateStart += stepMinutes;
   }
 
+  console.log('DEBUG generated slots:', slots);
   return slots;
+};
+
+/**
+ * Wrapper that returns the same array of available slot strings.
+ * (Used by bookingService.js for consistency.)
+ */
+export const getAvailableSlotTimes = async (businessId, serviceId, dateStr) => {
+  return await generateAvailableSlots(businessId, serviceId, dateStr);
 };

@@ -3,7 +3,7 @@ import Subscription from '../models/Subscription.js';
 import Business from '../models/Business.js';
 import Service from '../models/Service.js';
 import Staff from '../models/Staff.js';
-// import Booking from '../models/Booking.js';
+import Booking from '../models/Booking.js';
 
 // Helper to safely handle Infinity
 const toSafeNumber = (value) => {
@@ -73,27 +73,27 @@ export const canCreateStaff = async (businessId) => {
 };
 
 // // Check daily appointment limit for a business (on a specific date)
-// export const canCreateAppointment = async (businessId, date) => {
-//   const business = await Business.findById(businessId);
-//   if (!business) throw new Error('Business not found');
-//   const { limits } = await getPlanLimitsForUser(business.ownerId);
+export const canCreateAppointment = async (businessId, date) => {
+  const business = await Business.findById(businessId);
+  if (!business) throw new Error('Business not found');
+  const { limits } = await getPlanLimitsForUser(business.ownerId);
 
-//   // Count bookings for this business on the given date
-//   // We consider only 'pending' and 'confirmed' as consuming the daily limit
-//   // (cancelled/no_show will free the slot, but we count only confirmed/pending for limit)
-//   const startOfDay = new Date(date);
-//   startOfDay.setHours(0, 0, 0, 0);
-//   const endOfDay = new Date(date);
-//   endOfDay.setHours(23, 59, 59, 999);
+  // Count bookings for this business on the given date
+  // We consider only 'pending' and 'confirmed' as consuming the daily limit
+  // (cancelled/no_show will free the slot, but we count only confirmed/pending for limit)
+  const startOfDay = new Date(date);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(date);
+  endOfDay.setHours(23, 59, 59, 999);
 
-//   const bookingCount = await Booking.countDocuments({
-//     businessId,
-//     date: { $gte: startOfDay, $lte: endOfDay },
-//     status: { $in: ['pending', 'confirmed'] },
-//   });
+  const bookingCount = await Booking.countDocuments({
+    businessId,
+    date: { $gte: startOfDay, $lte: endOfDay },
+    status: { $in: ['pending', 'confirmed'] },
+  });
 
-//   return bookingCount < limits.maxAppointmentsPerDay;
-// };
+  return bookingCount < limits.maxAppointmentsPerDay;
+};
 
 // // Get remaining daily slots for display (optional)
 // export const getRemainingDailySlots = async (businessId, date) => {

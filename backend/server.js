@@ -13,6 +13,8 @@ import serviceRoutes from './routes/serviceRoutes.js';
 import staffRoutes from './routes/staffRoutes.js';
 import availabilityRoutes from './routes/availabilityRoutes.js';
 import slotRoutes from './routes/slotRoutes.js';
+import customerRoutes from './routes/customerRoutes.js';
+import bookingRoutes from './routes/bookingRoutes.js';
 
 import { errorHandler } from './middleware/errorMiddleware.js';
 
@@ -39,7 +41,8 @@ app.use('/api/services', serviceRoutes)
 app.use('/api/staff', staffRoutes);
 app.use('/api/availability', availabilityRoutes);
 app.use('/api/slots', slotRoutes);
-
+app.use('/api/customers', customerRoutes);
+app.use('/api/bookings', bookingRoutes);
 
 
 app.use((req, res, next) => {

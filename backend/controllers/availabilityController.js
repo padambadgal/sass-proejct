@@ -102,7 +102,7 @@ export const updateAvailability = async (req, res, next) => {
       { businessId, dayOfWeek },
       { $set: updateData },
       {
-        new: true,
+        returnDocument: 'after',
         upsert: true,
         runValidators: true,
         setDefaultsOnInsert: true,
