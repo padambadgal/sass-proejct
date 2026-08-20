@@ -99,28 +99,39 @@ export const createBooking = async (bookingData) => {
   }
 
   // 9. Create booking
-  const booking = await Booking.create({
-    businessId,
-    serviceId,
-    staffId: staffId || null,
-    customer: { name, email, phone },
-    customerId: customer._id,
-    date: bookingDate,
-    startTime,
-    endTime,
-    status: 'pending',
-    paymentStatus: 'unpaid',
-    bookingReference: reference,
-    notes: notes || '',
-    bookedBy,
-  });
 
-  // 10. Increment customer totalBookings
-  await Customer.findByIdAndUpdate(customer._id, { $inc: { totalBookings: 1 } });
+  let booking;
 
-  // 11. Populate service details for response
-  await booking.populate('serviceId', 'name price duration');
-  await booking.populate('businessId', 'name slug');
+  try {
 
-  return booking;
+    const booking = await Booking.create({
+      businessId,
+      serviceId,
+      staffId: staffId || null,
+      customer: { name, email, phone },
+      customerId: customer._id,
+      date: bookingDate,
+      startTime,
+      endTime,
+      status: 'pending',
+      paymentStatus: 'unpaid',
+      bookingReference: reference,
+      notes: notes || '',
+      bookedBy,
+    });
+
+    // 10. Increment customer totalBookings
+    await Customer.findByIdAndUpdate(customer._id, { $inc: { totalBookings: 1 } });
+
+    // 11. Populate service details for response
+    await booking.populate('serviceId', 'name price duration');
+    await booking.populate('businessId', 'name slug');
+
+    return booking;
+  } catch (error) {
+    if (error.code === 11000) {
+      throw new Error('Selected time slot is not available (duplicate booking prevented)');
+    }
+    throw error;
+  }
 };

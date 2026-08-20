@@ -146,26 +146,31 @@ export const getBookingById = async (req, res) => {
 // @desc    Update booking status (confirm, complete, cancel, no-show)
 // @route   PATCH /api/bookings/:id/status
 // @access  Private
+
+
 export const updateBookingStatus = async (req, res) => {
   try {
     const { status } = req.body;
     const allowedStatuses = ['pending', 'confirmed', 'completed', 'cancelled', 'no_show'];
     if (!status || !allowedStatuses.includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: `Invalid status. Allowed: ${allowedStatuses.join(', ')}`,
-      });
+      return res.status(400).json({ success: false, message: 'Invalid status' });
     }
 
     const booking = await Booking.findById(req.params.id);
     if (!booking) {
-      return res.status(404).json({
-        success: false,
-        message: 'Booking not found',
-      });
+      return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
     await validateBusinessOwnership(booking.businessId, req.user._id);
+
+    // Check if transition is allowed
+    const current = booking.status;
+    if (!allowedTransitions[current] || !allowedTransitions[current].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot transition from ${current} to ${status}`,
+      });
+    }
 
     booking.status = status;
     await booking.save();
@@ -217,6 +222,82 @@ export const cancelBooking = async (req, res) => {
   } catch (error) {
     if (error.message === 'Business not found or you do not own it') {
       return res.status(404).json({ success: false, message: error.message });
+    }
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const rescheduleBooking = async (req, res) => {
+  try {
+    const { date, startTime } = req.body;
+    if (!date || !startTime) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide date and startTime',
+      });
+    }
+
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // Ownership check
+    await validateBusinessOwnership(booking.businessId, req.user._id);
+
+    // Only pending or confirmed can be rescheduled
+    if (!['pending', 'confirmed'].includes(booking.status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot reschedule a booking with status ${booking.status}`,
+      });
+    }
+
+    // Validate new date is not in the past
+    const newDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (newDate < today) {
+      return res.status(400).json({ success: false, message: 'Cannot reschedule to a past date' });
+    }
+
+    // Check availability for the new slot (using service duration from the booking's service)
+    const service = await Service.findById(booking.serviceId);
+    if (!service) {
+      return res.status(404).json({ success: false, message: 'Service not found' });
+    }
+
+    const availableSlots = await getAvailableSlotTimes(booking.businessId, booking.serviceId, date);
+    if (!availableSlots.includes(startTime)) {
+      return res.status(400).json({ success: false, message: 'New time slot is not available' });
+    }
+
+    // Calculate new endTime
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const startMinutes = hours * 60 + minutes;
+    const endMinutes = startMinutes + service.duration;
+    const endHours = Math.floor(endMinutes / 60);
+    const endMins = endMinutes % 60;
+    const endTime = `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
+
+    // Update booking
+    booking.date = newDate;
+    booking.startTime = startTime;
+    booking.endTime = endTime;
+    // Optionally, regenerate reference? We keep the old one.
+    await booking.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Booking rescheduled successfully',
+      data: booking,
+    });
+  } catch (error) {
+    if (error.message === 'Business not found or you do not own it') {
+      return res.status(404).json({ success: false, message: error.message });
+    }
+    if (error.code === 11000) {
+      return res.status(400).json({ success: false, message: 'New time slot is not available' });
     }
     res.status(500).json({ success: false, message: error.message });
   }

@@ -118,11 +118,15 @@ bookingSchema.index({
   status: 1,
 });
 
-bookingSchema.index({
-  businessId: 1,
-  date: 1,
-  startTime: 1,
-});
+bookingSchema.index(
+  { businessId: 1, date: 1, startTime: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      status: { $in: ['pending', 'confirmed'] }
+    }
+  }
+);
 
 bookingSchema.index({
   customerId: 1,

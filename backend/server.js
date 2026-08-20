@@ -15,6 +15,7 @@ import availabilityRoutes from './routes/availabilityRoutes.js';
 import slotRoutes from './routes/slotRoutes.js';
 import customerRoutes from './routes/customerRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
+import publicRoutes from './routes/publicRoutes.js';
 
 import { errorHandler } from './middleware/errorMiddleware.js';
 
@@ -43,6 +44,7 @@ app.use('/api/availability', availabilityRoutes);
 app.use('/api/slots', slotRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/public', publicRoutes);
 
 
 app.use((req, res, next) => {

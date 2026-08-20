@@ -6,6 +6,7 @@ import {
   getBookingById,
   updateBookingStatus,
   cancelBooking,
+  rescheduleBooking,
 } from '../controllers/bookingController.js';
 
 import { protect } from '../middleware/authMiddleware.js';
@@ -27,5 +28,8 @@ router.delete('/:id', protect, requireActiveSubscription, cancelBooking);
 
 // PATCH /api/bookings/:id/status
 router.patch('/:id/status', protect, requireActiveSubscription, updateBookingStatus);
+
+router.patch('/:id/reschedule', rescheduleBooking);
+
 
 export default router;
