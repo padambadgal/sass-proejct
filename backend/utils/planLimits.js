@@ -66,9 +66,8 @@ export const canCreateService = async (businessId) => {
 // // Check staff limit for a business
 export const canCreateStaff = async (businessId) => {
   const business = await Business.findById(businessId);
-  if (!business) throw new Error('Business not found');
   const { limits } = await getPlanLimitsForUser(business.ownerId);
-  const staffCount = await Staff.countDocuments({ businessId });
+  const staffCount = await Staff.countDocuments({ businessId, status: 'active' });
   return staffCount < limits.maxStaff;
 };
 

@@ -175,15 +175,22 @@ export const updateBookingStatus = async (req, res) => {
     booking.status = status;
     await booking.save();
 
+    sendBookingStatusUpdate(booking, current).catch(err =>
+      console.error('Email error:', err)
+    );
+
+
     res.status(200).json({
       success: true,
       message: `Booking status updated to ${status}`,
       data: booking,
     });
+
   } catch (error) {
     if (error.message === 'Business not found or you do not own it') {
       return res.status(404).json({ success: false, message: error.message });
     }
+
     res.status(500).json({ success: false, message: error.message });
   }
 };

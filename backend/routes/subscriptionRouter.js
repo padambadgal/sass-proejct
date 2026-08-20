@@ -2,7 +2,7 @@ import express from 'express';
 import {
   getPlans,
   getMySubscription,
-  // createTestSubscription,
+  createTestSubscription,
 } from '../controllers/subscriptionController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
@@ -15,6 +15,6 @@ router.get('/plans', getPlans);
 router.get('/me', protect, getMySubscription);
 
 // ⚠️ TEST ROUTE – will be removed on Day 3
-// router.post('/test/create', protect, createTestSubscription);
+router.post('/test/create', protect, createTestSubscription);
 
 export default router;

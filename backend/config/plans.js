@@ -22,8 +22,8 @@ export const PLANS = {
       'Basic booking history',
     ],
   },
-  professional: {
-    id: 'professional',
+  Professional: {
+    id: 'Professional',
     name: 'Professional',
     price: 899,
     currency: 'INR',
@@ -48,8 +48,8 @@ export const PLANS = {
     ],
     isMostPopular: true, // UI flag
   },
-  business: {
-    id: 'business',
+  Business: {
+    id: 'Business',
     name: 'Business',
     price: 1200,
     currency: 'INR',

@@ -5,6 +5,7 @@ import Customer from '../models/Customer.js';
 import { getAvailableSlotTimes } from './slotService.js';
 import { canCreateAppointment } from '../utils/planLimits.js';
 import { generateBookingReference } from '../utils/bookingReference.js';
+import { sendBookingConfirmation } from './notificationService.js';
 
 /**
  * Create a new booking with all validations
@@ -51,8 +52,6 @@ export const createBooking = async (bookingData) => {
 
   // 5. Check slot availability using slot engine
   const availableSlots = await getAvailableSlotTimes(businessId, serviceId, date);
-  console.log('DEBUG bookingService availableSlots:', availableSlots);
-  console.log('DEBUG startTime to match:', startTime);
   if (!availableSlots.includes(startTime)) {
     throw new Error('Selected time slot is not available');
   }
@@ -126,6 +125,8 @@ export const createBooking = async (bookingData) => {
     // 11. Populate service details for response
     await booking.populate('serviceId', 'name price duration');
     await booking.populate('businessId', 'name slug');
+    
+    sendBookingConfirmation(booking).catch(err => console.error('Email error:', err));
 
     return booking;
   } catch (error) {
