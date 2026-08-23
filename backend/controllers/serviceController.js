@@ -140,7 +140,7 @@ export const updateService = async (req, res, next) => {
 
     // Apply updates
     service = await Service.findByIdAndUpdate(req.params.id, updates, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true,
     });
 

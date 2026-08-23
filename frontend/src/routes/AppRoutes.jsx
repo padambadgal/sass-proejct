@@ -8,6 +8,9 @@ import BusinessList from '../pages/Business/BusinessList';
 import BusinessForm from '../pages/Business/BusinessForm';
 import ServiceList from '../pages/Services/ServiceList';
 import ServiceForm from '../pages/Services/ServiceForm';
+import StaffList from '../pages/Staff/StaffList';
+import StaffForm from '../pages/Staff/StaffForm';
+import AvailabilitySchedule from '../pages/Availability/AvailabilitySchedule';
 
 const AppRoutes = () => {
   return (
@@ -17,22 +20,22 @@ const AppRoutes = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/" element={<Navigate to="/dashboard" />} />
 
-        
         {/* Protected routes with Layout */}
         <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/business" element={<BusinessList />} />
           <Route path="/business/new" element={<BusinessForm />} />
           <Route path="/business/:id/edit" element={<BusinessForm />} />
-          
-          
-          {/* Routes that require an active subscription */}
-          <Route element={<SubscriptionGuard />}>
-            <Route path="/services" element={<ServiceList />} />
-            <Route path="/services/new" element={<ServiceForm />} />
-            <Route path="/services/:id/edit" element={<ServiceForm />} />
-          </Route>
-          {/* Future routes will be added here */}
+          <Route path="/services" element={<ServiceList />} />
+          <Route path="/services/new" element={<ServiceForm />} />
+          <Route path="/services/:id/edit" element={<ServiceForm />} />
+          <Route path="/staff" element={<StaffList />} />
+          <Route path="/staff/new" element={<StaffForm />} />
+          <Route path="/staff/:id/edit" element={<StaffForm />} />
+          <Route path="/availability" element={<AvailabilitySchedule />} />
+          <Route path="/bookings" element={<div className="p-8"><h1 className="text-2xl font-bold">Bookings</h1><p className="text-gray-500 mt-2">Coming soon...</p></div>} />
+          <Route path="/customers" element={<div className="p-8"><h1 className="text-2xl font-bold">Customers</h1><p className="text-gray-500 mt-2">Coming soon...</p></div>} />
+          <Route path="/subscription" element={<div className="p-8"><h1 className="text-2xl font-bold">Subscription</h1><p className="text-gray-500 mt-2">Coming soon...</p></div>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/dashboard" />} />

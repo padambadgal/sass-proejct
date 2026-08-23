@@ -30,43 +30,30 @@ connectDB();
 
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 
+app.use(cors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+}));
+
 app.use(helmet());
 app.use(express.json());
 app.use(cookieParser());
 
-
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
-    message: {
-        success: false,
-        message: 'Too many requests from this IP, please try again later.'
-    },
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: { success: false, message: 'Too many requests from this IP, please try again later.' },
     standardHeaders: true,
     legacyHeaders: false,
 });
-
-
 app.use('/api/auth', limiter);
-
 
 const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 500,
-    message: {
-        success: false,
-        message: 'Too many requests, please slow down.'
-    }
+    message: { success: false, message: 'Too many requests, please slow down.' }
 });
-
-
 app.use('/api', globalLimiter);
-
-
-app.use(cors({
-    origin: 'http://localhost:5173', // Replace with your frontend URL
-    credentials: true, // Allow cookies to be sent
-}));
 
 app.use('/api/auth', userRouter);
 app.use('/api/subscriptions', subscriptionRouter);

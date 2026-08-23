@@ -14,7 +14,7 @@ router.get('/plans', getPlans);
 // Protected routes
 router.get('/me', protect, getMySubscription);
 
-// ⚠️ TEST ROUTE – will be removed on Day 3
+// TEST ROUTE – remove on Day 3
 router.post('/test/create', protect, createTestSubscription);
 
 export default router;

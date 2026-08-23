@@ -168,7 +168,7 @@ export const updateStaff = async (req, res, next) => {
 
     // Apply updates
     staff = await Staff.findByIdAndUpdate(req.params.id, updates, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true,
     }).populate('services');
 

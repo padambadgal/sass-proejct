@@ -155,7 +155,7 @@ export const updateBusiness = async (req, res,next) => {
 
     // Apply updates
     business = await Business.findByIdAndUpdate(req.params.id, updates, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true,
     });
 

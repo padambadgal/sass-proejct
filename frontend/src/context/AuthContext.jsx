@@ -7,16 +7,33 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [subscription, setSubscription] = useState(null);
+
+  const loadSubscription = async () => {
+    try {
+      const res = await apiClient.get('/subscriptions/me');
+      setSubscription(res.data.data);
+    } catch {
+      setSubscription(null);
+    }
+  };
 
   // Load user on mount
   useEffect(() => {
     const loadUser = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
       try {
         const res = await apiClient.get('/auth/me');
         setUser(res.data.data);
-      } catch (err) {
-        // Not logged in or token expired
+        await loadSubscription();
+      } catch {
+        localStorage.removeItem('token');
         setUser(null);
+        setSubscription(null);
       } finally {
         setLoading(false);
       }
@@ -27,8 +44,10 @@ export const AuthProvider = ({ children }) => {
   // Register
   const register = async (name, email, password) => {
     try {
-      const res = await apiClient.post('/auth/register', { name, email, password });
+      const res = await apiClient.post('/auth/register', { name, email, password, role: 'user' });
+      localStorage.setItem('token', res.data.data.token);
       setUser(res.data.data);
+      await loadSubscription();
       toast.success('Registration successful!');
       return { success: true };
     } catch (err) {
@@ -42,7 +61,9 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const res = await apiClient.post('/auth/login', { email, password });
+      localStorage.setItem('token', res.data.data.token);
       setUser(res.data.data);
+      await loadSubscription();
       toast.success('Welcome back!');
       return { success: true };
     } catch (err) {
@@ -56,19 +77,21 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       await apiClient.post('/auth/logout');
-      setUser(null);
-      toast.success('Logged out');
-    } catch (err) {
-      toast.error('Logout failed');
-    }
+    } catch {}
+    localStorage.removeItem('token');
+    setUser(null);
+    setSubscription(null);
+    toast.success('Logged out');
   };
 
   const value = {
     user,
+    subscription,
     loading,
     register,
     login,
     logout,
+    loadSubscription,
     isAuthenticated: !!user,
   };
 

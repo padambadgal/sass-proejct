@@ -14,11 +14,13 @@ import { requireActiveSubscription } from "../middleware/subscriptionMiddleware.
 const router = express.Router();
 
 // GET /api/business
-router.get("/", protect, requireActiveSubscription, getMyBusinesses);
+router.get("/me", protect, requireActiveSubscription, getMyBusinesses);
 
 // POST /api/business
 router.post("/", protect, requireActiveSubscription, createBusiness);
 
+
+router.get('/:id', getBusinessById);
 // GET /api/business/:id
 router.get("/:id", protect, requireActiveSubscription, getBusinessById);
 
