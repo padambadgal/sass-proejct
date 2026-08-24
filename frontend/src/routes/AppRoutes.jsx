@@ -11,6 +11,9 @@ import ServiceForm from '../pages/Services/ServiceForm';
 import StaffList from '../pages/Staff/StaffList';
 import StaffForm from '../pages/Staff/StaffForm';
 import AvailabilitySchedule from '../pages/Availability/AvailabilitySchedule';
+import CustomerList from '../pages/Customers/CustomerList';
+import CustomerDetail from '../pages/Customers/CustomerDetail';
+import CustomerForm from '../pages/Customers/CustomerForm';
 
 const AppRoutes = () => {
   return (
@@ -23,18 +26,27 @@ const AppRoutes = () => {
         {/* Protected routes with Layout */}
         <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
+
           <Route path="/business" element={<BusinessList />} />
           <Route path="/business/new" element={<BusinessForm />} />
           <Route path="/business/:id/edit" element={<BusinessForm />} />
+
           <Route path="/services" element={<ServiceList />} />
           <Route path="/services/new" element={<ServiceForm />} />
           <Route path="/services/:id/edit" element={<ServiceForm />} />
+
           <Route path="/staff" element={<StaffList />} />
           <Route path="/staff/new" element={<StaffForm />} />
           <Route path="/staff/:id/edit" element={<StaffForm />} />
+
           <Route path="/availability" element={<AvailabilitySchedule />} />
+
+          <Route path="/customers" element={<CustomerList />} />
+          <Route path="/customers/:id" element={<CustomerDetail />} />
+          <Route path="/customers/:id/edit" element={<CustomerForm />} />
+
           <Route path="/bookings" element={<div className="p-8"><h1 className="text-2xl font-bold">Bookings</h1><p className="text-gray-500 mt-2">Coming soon...</p></div>} />
-          <Route path="/customers" element={<div className="p-8"><h1 className="text-2xl font-bold">Customers</h1><p className="text-gray-500 mt-2">Coming soon...</p></div>} />
+          
           <Route path="/subscription" element={<div className="p-8"><h1 className="text-2xl font-bold">Subscription</h1><p className="text-gray-500 mt-2">Coming soon...</p></div>} />
         </Route>
 
