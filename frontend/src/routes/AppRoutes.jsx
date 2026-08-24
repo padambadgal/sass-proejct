@@ -14,6 +14,9 @@ import AvailabilitySchedule from '../pages/Availability/AvailabilitySchedule';
 import CustomerList from '../pages/Customers/CustomerList';
 import CustomerDetail from '../pages/Customers/CustomerDetail';
 import CustomerForm from '../pages/Customers/CustomerForm';
+import BookingList from '../pages/Bookings/BookingList';
+import BookingDetail from '../pages/Bookings/BookingDetail';
+
 
 const AppRoutes = () => {
   return (
@@ -45,8 +48,9 @@ const AppRoutes = () => {
           <Route path="/customers/:id" element={<CustomerDetail />} />
           <Route path="/customers/:id/edit" element={<CustomerForm />} />
 
-          <Route path="/bookings" element={<div className="p-8"><h1 className="text-2xl font-bold">Bookings</h1><p className="text-gray-500 mt-2">Coming soon...</p></div>} />
-          
+          <Route path="/bookings" element={<BookingList />} />
+          <Route path="/bookings/:id" element={<BookingDetail />} />
+
           <Route path="/subscription" element={<div className="p-8"><h1 className="text-2xl font-bold">Subscription</h1><p className="text-gray-500 mt-2">Coming soon...</p></div>} />
         </Route>
 
