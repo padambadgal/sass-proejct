@@ -5,9 +5,14 @@ import {
   getPublicAvailability,
   getPublicSlots,
   createPublicBooking,
+  getPublicBusinesses 
 } from '../controllers/publicController.js';
 
 const router = express.Router();
+
+
+router.get('/businesses', getPublicBusinesses);
+
 
 // Business profile
 router.get('/business/:slug', getBusinessBySlug);
@@ -23,5 +28,7 @@ router.get('/business/:slug/slots', getPublicSlots);
 
 // Create booking (public)
 router.post('/business/:slug/bookings', createPublicBooking);
+
+
 
 export default router;

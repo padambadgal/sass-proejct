@@ -263,3 +263,20 @@ export const createPublicBooking = async (req, res) => {
     });
   }
 };
+
+// @desc    Get all active businesses (public)
+// @route   GET /api/public/businesses
+// @access  Public
+export const getPublicBusinesses = async (req, res) => {
+  try {
+    const businesses = await Business.find({ isActive: true })
+      .select('name slug description logo phone email address')
+      .sort({ name: 1 });
+    res.status(200).json({
+      success: true,
+      data: businesses,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};

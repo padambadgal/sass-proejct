@@ -16,8 +16,11 @@ import CustomerDetail from '../pages/Customers/CustomerDetail';
 import CustomerForm from '../pages/Customers/CustomerForm';
 import BookingList from '../pages/Bookings/BookingList';
 import BookingDetail from '../pages/Bookings/BookingDetail';
-
-
+import PublicBookingPage from '../pages/PublicBooking/BusinessListPage.jsx';
+import SubscriptionStatus from '../pages/Subscription/SubscriptionStatus';
+import Pricing from '../pages/Subscription/Pricing';
+import BusinessListPage from '../pages/PublicBooking/BusinessListPage';
+import BookingWizard from '../pages/PublicBooking/PublicBookingWizard';
 const AppRoutes = () => {
   return (
     <BrowserRouter>
@@ -26,9 +29,16 @@ const AppRoutes = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/" element={<Navigate to="/dashboard" />} />
 
+        <Route path="/book/:slug" element={<PublicBookingPage />} />
+
+        <Route path="/book" element={<BusinessListPage />} />
+        <Route path="/book/:slug" element={<BookingWizard />} />
+
         {/* Protected routes with Layout */}
         <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
+
+          <Route path="/pricing" element={<Pricing />} />
 
           <Route path="/business" element={<BusinessList />} />
           <Route path="/business/new" element={<BusinessForm />} />
@@ -50,6 +60,9 @@ const AppRoutes = () => {
 
           <Route path="/bookings" element={<BookingList />} />
           <Route path="/bookings/:id" element={<BookingDetail />} />
+
+          <Route path="/subscription" element={<SubscriptionStatus />} />
+
 
           <Route path="/subscription" element={<div className="p-8"><h1 className="text-2xl font-bold">Subscription</h1><p className="text-gray-500 mt-2">Coming soon...</p></div>} />
         </Route>
