@@ -20,7 +20,7 @@ router.get("/me", protect, requireActiveSubscription, getMyBusinesses);
 router.post("/", protect, requireActiveSubscription, createBusiness);
 
 
-router.get('/:id', getBusinessById);
+// router.get('/:id', getBusinessById);
 // GET /api/business/:id
 router.get("/:id", protect, requireActiveSubscription, getBusinessById);
 

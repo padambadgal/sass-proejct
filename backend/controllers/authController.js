@@ -105,7 +105,6 @@ export const logout = (req, res) => {
 
 
 export const getMe = async (req, res) => {
-    // req.user is set by the protect middleware
     res.status(200).json({
         success: true,
         data: req.user,

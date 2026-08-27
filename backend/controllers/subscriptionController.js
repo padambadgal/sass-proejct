@@ -6,7 +6,10 @@ import { getActiveSubscription } from '../utils/planLimits.js';
 export const getPlans  = async (req, res) => {
   try {
     const plans = getPlansList();
-   res.send(JSON.stringify(plans));
+    res.status(200).json({
+      success: true,
+      data: plans,
+    });
   } catch (error) {
     res.status(500).json({
       success: false,

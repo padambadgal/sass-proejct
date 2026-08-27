@@ -52,8 +52,7 @@ const AvailabilitySchedule = () => {
       setLoading(true);
       try {
         const res = await apiClient.get(`/availability?businessId=${selectedBusinessId}`);
-        const data = res.data.data; // array of availability objects
-        // Build full 7-day schedule: start with defaults, then override with fetched data
+        const data = res.data.data;
         const fullSchedule = DAYS.map(day => {
           const existing = data.find(d => d.dayOfWeek === day.value);
           if (existing) {
@@ -71,7 +70,6 @@ const AvailabilitySchedule = () => {
         setSchedule(fullSchedule);
       } catch (err) {
         toast.error('Failed to load availability');
-        // Set default schedule
         setSchedule(DAYS.map(day => defaultDay(day.value)));
       } finally {
         setLoading(false);
@@ -80,7 +78,6 @@ const AvailabilitySchedule = () => {
     fetchAvailability();
   }, [selectedBusinessId]);
 
-  // Update a specific day's field
   const updateDay = (index, field, value) => {
     setSchedule(prev => {
       const updated = [...prev];
@@ -89,21 +86,17 @@ const AvailabilitySchedule = () => {
     });
   };
 
-  // Add a break to a day
   const addBreak = (index) => {
-    const day = schedule[index];
-    const newBreak = { start: '12:00', end: '13:00' };
     setSchedule(prev => {
       const updated = [...prev];
       updated[index] = {
         ...updated[index],
-        breaks: [...updated[index].breaks, newBreak],
+        breaks: [...updated[index].breaks, { start: '12:00', end: '13:00' }],
       };
       return updated;
     });
   };
 
-  // Remove a break from a day
   const removeBreak = (dayIndex, breakIndex) => {
     setSchedule(prev => {
       const updated = [...prev];
@@ -115,7 +108,6 @@ const AvailabilitySchedule = () => {
     });
   };
 
-  // Update a break field (start or end)
   const updateBreak = (dayIndex, breakIndex, field, value) => {
     setSchedule(prev => {
       const updated = [...prev];
@@ -126,12 +118,10 @@ const AvailabilitySchedule = () => {
     });
   };
 
-  // Save all changes
   const handleSave = async () => {
     if (!selectedBusinessId) return;
     setSaving(true);
     try {
-      // Prepare payload: days array (exclude day names, just dayOfWeek, isOpen, startTime, endTime, breaks)
       const daysPayload = schedule.map(day => ({
         dayOfWeek: day.dayOfWeek,
         isOpen: day.isOpen,
@@ -155,6 +145,9 @@ const AvailabilitySchedule = () => {
   const handleBusinessChange = (e) => {
     setSelectedBusinessId(e.target.value);
   };
+
+  // Get the selected business object
+  const selectedBusiness = businesses.find(b => b._id === selectedBusinessId);
 
   if (businesses.length === 0) {
     return (
@@ -197,6 +190,37 @@ const AvailabilitySchedule = () => {
           </button>
         </div>
       </div>
+
+      {/* ===== PUBLIC BOOKING URL SECTION ===== */}
+      {selectedBusiness?.slug && (
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-sm text-green-800 font-medium">🔗 Your Public Booking URL</p>
+              <p className="text-sm text-gray-600">
+                Share this link with your customers to accept bookings:
+              </p>
+              <a
+                href={`/book/${selectedBusiness.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-indigo-600 font-mono hover:underline text-sm"
+              >
+                /book/{selectedBusiness.slug}
+              </a>
+            </div>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(`${window.location.origin}/book/${selectedBusiness.slug}`);
+                toast.success('Booking URL copied!');
+              }}
+              className="px-3 py-1 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700"
+            >
+              Copy URL
+            </button>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-8">Loading...</div>
@@ -242,7 +266,6 @@ const AvailabilitySchedule = () => {
                     </div>
                   </div>
 
-                  {/* Break List */}
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Breaks</label>
                     {day.breaks.map((br, brIdx) => (

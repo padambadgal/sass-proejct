@@ -84,7 +84,7 @@ const ServiceForm = () => {
       <h1 className="text-2xl font-bold mb-6">{id ? 'Edit Service' : 'Add Service'}</h1>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Name *</label>
+          <label className="block text-sm font-medium text-gray-700">Service Name *</label>
           <input
             {...register('name')}
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
