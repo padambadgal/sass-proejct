@@ -3,15 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../../api/client';
 import ReactDatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
-import { Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Calendar, Clock, User, Mail, Phone, FileText, Check, Loader2, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const steps = ['Service', 'Date & Time', 'Your Details'];
-
-const BookingWizard = () => {
+const PublicBookingWizard = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
 
+  // State
   const [business, setBusiness] = useState(null);
   const [services, setServices] = useState([]);
   const [selectedService, setSelectedService] = useState(null);
@@ -22,7 +21,6 @@ const BookingWizard = () => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [bookingResult, setBookingResult] = useState(null);
-  const [currentStep, setCurrentStep] = useState(0);
 
   // Fetch business and services
   useEffect(() => {
@@ -70,7 +68,7 @@ const BookingWizard = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedSlot || !selectedDate || !selectedService || !business) {
-      toast.error('Please complete all steps');
+      toast.error('Please complete all selections');
       return;
     }
     if (!customer.name || !customer.email || !customer.phone) {
@@ -102,40 +100,21 @@ const BookingWizard = () => {
     }
   };
 
-  // Navigation
-  const nextStep = () => {
-    if (currentStep === 0 && !selectedService) {
-      toast.error('Please select a service');
-      return;
-    }
-    if (currentStep === 1 && !selectedSlot) {
-      toast.error('Please select a time slot');
-      return;
-    }
-    setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
-  };
-
-  const prevStep = () => {
-    if (currentStep === 0) {
-      navigate('/book');
-      return;
-    }
-    setCurrentStep((prev) => Math.max(prev - 1, 0));
-  };
-
   // Success screen
   if (bookingResult) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <div className="max-w-lg w-full bg-white rounded-lg shadow-lg p-8 text-center">
-          <Check className="mx-auto h-16 w-16 text-green-500" />
-          <h2 className="mt-4 text-2xl font-bold text-gray-900">Booking Confirmed!</h2>
+        <div className="max-w-lg w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+            <Check className="h-10 w-10 text-green-600" />
+          </div>
+          <h2 className="mt-4 text-2xl font-bold text-gray-900">Booking Confirmed! 🎉</h2>
           <p className="mt-2 text-gray-600">Your appointment has been booked successfully.</p>
-          <div className="mt-4 p-4 bg-gray-50 rounded-md">
+          <div className="mt-6 p-4 bg-gray-50 rounded-xl">
             <p className="text-sm text-gray-500">Booking Reference</p>
             <p className="text-lg font-mono font-bold text-indigo-600">{bookingResult.bookingReference}</p>
           </div>
-          <div className="mt-4 text-sm text-gray-500 space-y-1 text-left">
+          <div className="mt-4 text-sm text-gray-500 space-y-1 text-left bg-gray-50 p-4 rounded-xl">
             <p><span className="font-medium">Business:</span> {business.name}</p>
             <p><span className="font-medium">Service:</span> {selectedService.name}</p>
             <p><span className="font-medium">Date:</span> {selectedDate?.toLocaleDateString('en-IN', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</p>
@@ -144,7 +123,7 @@ const BookingWizard = () => {
           </div>
           <button
             onClick={() => window.location.reload()}
-            className="mt-6 inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+            className="mt-6 inline-flex items-center px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition"
           >
             Book Another Appointment
           </button>
@@ -161,210 +140,220 @@ const BookingWizard = () => {
     );
   }
 
-  // Render current step
-  const renderStep = () => {
-    switch (currentStep) {
-      case 0: // Service
-        return (
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">{business.name}</h2>
-            <p className="text-sm text-gray-500 mb-4">Select a service</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {services.map((svc) => (
-                <div
-                  key={svc._id}
-                  onClick={() => setSelectedService(svc)}
-                  className={`border rounded-lg p-3 cursor-pointer transition-all ${
-                    selectedService?._id === svc._id
-                      ? 'border-indigo-600 bg-indigo-50'
-                      : 'border-gray-200 hover:border-indigo-300'
-                  }`}
-                >
-                  <div className="font-medium text-gray-900">{svc.name}</div>
-                  <div className="text-sm text-gray-500">₹{svc.price} · {svc.duration} min</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      case 1: // Date & Time
-        return (
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Date & Time</h2>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-              <ReactDatePicker
-                selected={selectedDate}
-                onChange={setSelectedDate}
-                minDate={new Date()}
-                dateFormat="EEEE, MMMM d, yyyy"
-                placeholderText="Choose a date"
-                className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
-            {selectedDate && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Time Slots</label>
-                {availableSlots.length === 0 ? (
-                  <p className="text-sm text-gray-500">No slots available for this date.</p>
-                ) : (
-                  <div className="grid grid-cols-4 gap-2">
-                    {availableSlots.map((slot) => (
-                      <button
-                        key={slot}
-                        type="button"
-                        onClick={() => setSelectedSlot(slot)}
-                        className={`p-2 text-sm rounded-md border ${
-                          selectedSlot === slot
-                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-medium'
-                            : 'border-gray-300 hover:border-indigo-300'
-                        }`}
-                      >
-                        {slot}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        );
-      case 2: // Customer Details
-        return (
-          <form onSubmit={handleSubmit}>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Details</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Full Name *</label>
-                <input
-                  type="text"
-                  value={customer.name}
-                  onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
-                  required
-                  className="mt-1 w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="John Doe"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Email *</label>
-                <input
-                  type="email"
-                  value={customer.email}
-                  onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
-                  required
-                  className="mt-1 w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="john@example.com"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Phone *</label>
-                <input
-                  type="tel"
-                  value={customer.phone}
-                  onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
-                  required
-                  className="mt-1 w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="9876543210"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Notes (optional)</label>
-                <textarea
-                  value={customer.notes}
-                  onChange={(e) => setCustomer({ ...customer, notes: e.target.value })}
-                  rows="2"
-                  className="mt-1 w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="Any special requests..."
-                />
-              </div>
-            </div>
-            <div className="mt-6">
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full py-2 px-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="animate-spin h-4 w-4" />
-                    Processing...
-                  </>
-                ) : (
-                  'Confirm Booking'
-                )}
-              </button>
-            </div>
-          </form>
-        );
-      default:
-        return null;
-    }
-  };
+  const isReady = selectedService && selectedDate && selectedSlot && customer.name && customer.email && customer.phone;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
-        {/* Header */}
-        <div className="bg-indigo-600 px-6 py-4 text-white flex justify-between items-center">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-indigo-600 text-white py-6 px-4">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Book an Appointment</h1>
-            <p className="text-sm text-indigo-100">{business.name}</p>
+            <h1 className="text-2xl font-bold">{business.name}</h1>
+            <p className="text-indigo-100 text-sm">{business.description}</p>
           </div>
           <button
             onClick={() => navigate('/book')}
-            className="text-sm bg-white/20 px-3 py-1 rounded-md hover:bg-white/30 transition"
+            className="flex items-center gap-1 text-sm bg-white/20 px-4 py-2 rounded-xl hover:bg-white/30 transition"
           >
-            Change Business
+            <ArrowLeft size={16} /> Change Business
           </button>
         </div>
+      </div>
 
-        {/* Progress */}
-        <div className="px-6 pt-4 flex justify-center gap-2">
-          {steps.map((label, idx) => (
-            <div
-              key={idx}
-              className={`flex items-center gap-1 text-sm font-medium ${
-                idx <= currentStep ? 'text-indigo-600' : 'text-gray-400'
-              }`}
-            >
-              <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                  idx <= currentStep ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-500'
-                }`}
-              >
-                {idx + 1}
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column – Selection */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Services */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Choose a Service</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {services.map((svc) => (
+                  <div
+                    key={svc._id}
+                    onClick={() => setSelectedService(svc)}
+                    className={`p-4 border rounded-xl cursor-pointer transition-all ${
+                      selectedService?._id === svc._id
+                        ? 'border-indigo-600 bg-indigo-50 shadow-sm'
+                        : 'border-gray-200 hover:border-indigo-300 hover:shadow-sm'
+                    }`}
+                  >
+                    <div className="font-medium text-gray-900">{svc.name}</div>
+                    <div className="text-sm text-gray-500">₹{svc.price} · {svc.duration} min</div>
+                    {svc.description && <div className="text-xs text-gray-400 mt-1">{svc.description}</div>}
+                  </div>
+                ))}
               </div>
-              <span className="hidden sm:inline">{label}</span>
-              {idx < steps.length - 1 && (
-                <ChevronRight size={16} className={`${idx < currentStep ? 'text-indigo-300' : 'text-gray-300'}`} />
-              )}
             </div>
-          ))}
-        </div>
 
-        {/* Content */}
-        <div className="p-6">{renderStep()}</div>
+            {/* Date & Time */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Date & Time</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                  <ReactDatePicker
+                    selected={selectedDate}
+                    onChange={setSelectedDate}
+                    minDate={new Date()}
+                    dateFormat="EEEE, MMMM d, yyyy"
+                    placeholderText="Choose a date"
+                    className="w-full border border-gray-300 rounded-xl shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Time Slots</label>
+                  {!selectedDate ? (
+                    <p className="text-sm text-gray-400 italic">Select a date first</p>
+                  ) : availableSlots.length === 0 ? (
+                    <p className="text-sm text-yellow-600">No slots available for this date</p>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto">
+                      {availableSlots.map((slot) => (
+                        <button
+                          key={slot}
+                          type="button"
+                          onClick={() => setSelectedSlot(slot)}
+                          className={`p-2 text-sm rounded-xl border transition-all ${
+                            selectedSlot === slot
+                              ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-medium'
+                              : 'border-gray-300 hover:border-indigo-300'
+                          }`}
+                        >
+                          {slot}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
 
-        {/* Navigation (only for steps 0 and 1) */}
-        {currentStep < 2 && (
-          <div className="px-6 pb-6 flex justify-between">
-            <button
-              onClick={prevStep}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              <ChevronLeft size={16} className="inline mr-1" /> Back
-            </button>
-            <button
-              onClick={nextStep}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 flex items-center gap-1"
-            >
-              Next <ChevronRight size={16} />
-            </button>
+            {/* Customer Details */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Details</h2>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Full Name *</label>
+                    <div className="relative mt-1">
+                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <input
+                        type="text"
+                        value={customer.name}
+                        onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
+                        required
+                        className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        placeholder="John Doe"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Email *</label>
+                    <div className="relative mt-1">
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <input
+                        type="email"
+                        value={customer.email}
+                        onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
+                        required
+                        className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        placeholder="john@example.com"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Phone *</label>
+                  <div className="relative mt-1">
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <input
+                      type="tel"
+                      value={customer.phone}
+                      onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
+                      required
+                      className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      placeholder="9876543210"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Notes (optional)</label>
+                  <div className="relative mt-1">
+                    <FileText className="absolute left-3 top-3 text-gray-400 h-4 w-4" />
+                    <textarea
+                      value={customer.notes}
+                      onChange={(e) => setCustomer({ ...customer, notes: e.target.value })}
+                      rows="2"
+                      className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      placeholder="Any special requests..."
+                    />
+                  </div>
+                </div>
+              </form>
+            </div>
           </div>
-        )}
+
+          {/* Right Column – Booking Summary (Sticky) */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-24">
+              <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                <h3 className="font-semibold text-gray-900 text-lg mb-4">Booking Summary</h3>
+                <div className="space-y-4 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Business</span>
+                    <span className="font-medium text-gray-900">{business.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Service</span>
+                    <span className="font-medium text-gray-900">{selectedService?.name || '—'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Duration</span>
+                    <span className="font-medium text-gray-900">{selectedService?.duration || '—'} min</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Date</span>
+                    <span className="font-medium text-gray-900">
+                      {selectedDate ? selectedDate.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' }) : '—'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Time</span>
+                    <span className="font-medium text-gray-900">{selectedSlot || '—'}</span>
+                  </div>
+                  <div className="border-t pt-4 flex justify-between font-semibold">
+                    <span className="text-gray-900">Total</span>
+                    <span className="text-indigo-600">₹{selectedService?.price || 0}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={handleSubmit}
+                  disabled={!isReady || submitting}
+                  className="mt-6 w-full py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="animate-spin h-4 w-4" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Confirm Booking'
+                  )}
+                </button>
+                {!isReady && (
+                  <p className="mt-3 text-xs text-gray-400 text-center">
+                    Please select a service, date, time, and fill in your details.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
-export default BookingWizard;
+export default PublicBookingWizard;
