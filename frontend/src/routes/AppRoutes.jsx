@@ -9,6 +9,7 @@ import Register from '../pages/Auth/Register';
 // Public Booking (Customer)
 import BusinessListPage from '../pages/PublicBooking/BusinessListPage';
 import PublicBookingWizard from '../pages/PublicBooking/PublicBookingWizard';
+import CustomerReschedule from '../pages/PublicBooking/CustomerReschedule';
 
 // Protected Pages (require login)
 import Checkout from '../pages/Subscription/Checkout';
@@ -24,6 +25,7 @@ import BusinessForm from '../pages/Business/BusinessForm';
 import ServiceList from '../pages/Services/ServiceList';
 import ServiceForm from '../pages/Services/ServiceForm';
 import StaffList from '../pages/Staff/StaffList';
+import StaffDetail from '../pages/Staff/StaffDetail';
 import StaffForm from '../pages/Staff/StaffForm';
 import AvailabilitySchedule from '../pages/Availability/AvailabilitySchedule';
 import CustomerList from '../pages/Customers/CustomerList';
@@ -32,6 +34,8 @@ import CustomerForm from '../pages/Customers/CustomerForm';
 import BookingList from '../pages/Bookings/BookingList';
 import BookingDetail from '../pages/Bookings/BookingDetail';
 import SubscriptionStatus from '../pages/Subscription/SubscriptionStatus';
+
+
 
 const AppRoutes = () => {
   return (
@@ -46,6 +50,8 @@ const AppRoutes = () => {
         {/* Public Booking (Customer) */}
         <Route path="/book" element={<BusinessListPage />} />
         <Route path="/book/:slug" element={<PublicBookingWizard />} />
+        <Route path="/reschedule/:reference" element={<CustomerReschedule />} />
+
 
         {/* ========== PROTECTED ROUTES (login required) ========== */}
         <Route element={<ProtectedRoute />}>
@@ -64,6 +70,7 @@ const AppRoutes = () => {
               <Route path="/services/new" element={<ServiceForm />} />
               <Route path="/services/:id/edit" element={<ServiceForm />} />
               <Route path="/staff" element={<StaffList />} />
+              <Route path="/staff/:id" element={<StaffDetail />} />
               <Route path="/staff/new" element={<StaffForm />} />
               <Route path="/staff/:id/edit" element={<StaffForm />} />
               <Route path="/availability" element={<AvailabilitySchedule />} />

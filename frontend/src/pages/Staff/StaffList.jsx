@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import apiClient from '../../api/client';
-import { Plus, Edit, Trash2, AlertCircle, User } from 'lucide-react';
+import { Eye, Plus, Edit, Trash2, AlertCircle, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const StaffList = () => {
@@ -164,13 +164,19 @@ const StaffList = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{member.phone || '—'}</td>
                   <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{getServiceNames(member)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      member.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${member.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
                       {member.status}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                    <Link
+                      to={`/staff/${member._id}`}
+                      className="text-blue-600 hover:text-blue-900"
+                      title="View"
+                    >
+                      <Eye size={18} className="inline" />
+                    </Link>
                     <Link
                       to={`/staff/${member._id}/edit`}
                       state={{ businessId: selectedBusinessId }}

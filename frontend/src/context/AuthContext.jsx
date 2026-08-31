@@ -74,6 +74,7 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setSubscription(null);
       toast.success('Logged out');
+      
     } catch (err) {
       toast.error('Logout failed');
     }

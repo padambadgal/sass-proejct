@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import apiClient from '../../api/client';
-import { ArrowLeft, Calendar, Clock, DollarSign, User } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, DollarSign, User, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
+import RescheduleModal from '../Bookings/RescheduleModal';
 
 const CustomerDetail = () => {
   const { id } = useParams();
@@ -10,6 +11,8 @@ const CustomerDetail = () => {
   const [customer, setCustomer] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [rescheduleBooking, setRescheduleBooking] = useState(null);
 
   useEffect(() => {
     const fetchCustomerDetail = async () => {
@@ -25,7 +28,13 @@ const CustomerDetail = () => {
       }
     };
     fetchCustomerDetail();
-  }, [id, navigate]);
+  }, [id, navigate, refreshKey]);
+
+  const handleRescheduleSuccess = () => {
+    setRescheduleBooking(null);
+    setRefreshKey(prev => prev + 1);
+    toast.success('Booking rescheduled successfully');
+  };
 
   if (loading) return <div className="text-center py-8">Loading...</div>;
   if (!customer) return <div className="text-center py-8">Customer not found</div>;
@@ -38,9 +47,11 @@ const CustomerDetail = () => {
     no_show: 'bg-gray-100 text-gray-800',
   };
 
+  // Only pending/confirmed can be rescheduled
+  const canReschedule = (status) => ['pending', 'confirmed'].includes(status);
+
   return (
     <div>
-      {/* Back button */}
       <button
         onClick={() => navigate('/customers')}
         className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900"
@@ -92,6 +103,7 @@ const CustomerDetail = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -111,6 +123,17 @@ const CustomerDetail = () => {
                         {b.paymentStatus}
                       </span>
                     </td>
+                    <td className="px-4 py-3 text-sm">
+                      {canReschedule(b.status) && (
+                        <button
+                          onClick={() => setRescheduleBooking(b)}
+                          className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1"
+                          title="Reschedule"
+                        >
+                          <RefreshCw size={16} /> Reschedule
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -118,6 +141,14 @@ const CustomerDetail = () => {
           </div>
         )}
       </div>
+
+      {/* Reschedule Modal */}
+      <RescheduleModal
+        booking={rescheduleBooking}
+        isOpen={!!rescheduleBooking}
+        onClose={() => setRescheduleBooking(null)}
+        onSuccess={handleRescheduleSuccess}
+      />
     </div>
   );
 };

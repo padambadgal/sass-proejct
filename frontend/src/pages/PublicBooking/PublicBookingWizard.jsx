@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext'; // 👈 import auth
 import apiClient from '../../api/client';
 import ReactDatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
@@ -9,6 +10,7 @@ import toast from 'react-hot-toast';
 const PublicBookingWizard = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth(); // 👈 get auth status
 
   // State
   const [business, setBusiness] = useState(null);
@@ -67,6 +69,18 @@ const PublicBookingWizard = () => {
   // Submit booking
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // 🔐 Check authentication first
+    if (!isAuthenticated) {
+      // Save current selections to sessionStorage (optional, but we skip for simplicity)
+      // Redirect to login with return URL
+      const redirectUrl = encodeURIComponent(window.location.pathname + window.location.search);
+      navigate(`/login?redirect=${redirectUrl}`);
+      toast.info('Please login to book an appointment');
+      return;
+    }
+
+    // Validation
     if (!selectedSlot || !selectedDate || !selectedService || !business) {
       toast.error('Please complete all selections');
       return;
@@ -121,12 +135,20 @@ const PublicBookingWizard = () => {
             <p><span className="font-medium">Time:</span> {selectedSlot}</p>
             <p><span className="font-medium">Customer:</span> {customer.name}</p>
           </div>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-6 inline-flex items-center px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition"
-          >
-            Book Another Appointment
-          </button>
+          <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={() => navigate(`/reschedule/${bookingResult.bookingReference}`)}
+              className="inline-flex items-center justify-center px-6 py-3 bg-indigo-100 text-indigo-700 rounded-xl hover:bg-indigo-200 transition font-medium"
+            >
+              Reschedule Appointment
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              className="inline-flex items-center justify-center px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition font-medium"
+            >
+              Book Another Appointment
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -328,20 +350,39 @@ const PublicBookingWizard = () => {
                     <span className="text-indigo-600">₹{selectedService?.price || 0}</span>
                   </div>
                 </div>
-                <button
-                  onClick={handleSubmit}
-                  disabled={!isReady || submitting}
-                  className="mt-6 w-full py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="animate-spin h-4 w-4" />
-                      Processing...
-                    </>
-                  ) : (
-                    'Confirm Booking'
-                  )}
-                </button>
+
+                {/* ===== AUTH CHECK ===== */}
+                {!isAuthenticated ? (
+                  <div className="mt-6">
+                    <p className="text-sm text-gray-500 text-center mb-2">
+                      Please login to confirm your booking
+                    </p>
+                    <button
+                      onClick={() => {
+                        const redirectUrl = encodeURIComponent(window.location.pathname + window.location.search);
+                        navigate(`/login?redirect=${redirectUrl}`);
+                      }}
+                      className="w-full py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-2"
+                    >
+                      Login to Book
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleSubmit}
+                    disabled={!isReady || submitting}
+                    className="mt-6 w-full py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="animate-spin h-4 w-4" />
+                        Processing...
+                      </>
+                    ) : (
+                      'Confirm Booking'
+                    )}
+                  </button>
+                )}
                 {!isReady && (
                   <p className="mt-3 text-xs text-gray-400 text-center">
                     Please select a service, date, time, and fill in your details.
