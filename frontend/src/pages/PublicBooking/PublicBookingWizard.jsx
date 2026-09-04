@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext'; // 👈 import auth
 import apiClient from '../../api/client';
 import ReactDatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { Calendar, Clock, User, Mail, Phone, FileText, Check, Loader2, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext';
 
 const PublicBookingWizard = () => {
+  const { isAuthenticated, user } = useAuth();
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth(); // 👈 get auth status
 
   // State
   const [business, setBusiness] = useState(null);
@@ -69,18 +69,6 @@ const PublicBookingWizard = () => {
   // Submit booking
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // 🔐 Check authentication first
-    if (!isAuthenticated) {
-      // Save current selections to sessionStorage (optional, but we skip for simplicity)
-      // Redirect to login with return URL
-      const redirectUrl = encodeURIComponent(window.location.pathname + window.location.search);
-      navigate(`/login?redirect=${redirectUrl}`);
-      toast.info('Please login to book an appointment');
-      return;
-    }
-
-    // Validation
     if (!selectedSlot || !selectedDate || !selectedService || !business) {
       toast.error('Please complete all selections');
       return;
@@ -114,7 +102,23 @@ const PublicBookingWizard = () => {
     }
   };
 
-  // Success screen
+  useEffect(() => {
+  if (!isAuthenticated) {
+    toast('Please login to book an appointment'); // ✅ Correct
+    navigate('/login');
+  }
+}, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    if (user) {
+      setCustomer(prev => ({
+        ...prev,
+        name: user.name || '',
+        email: user.email || '',
+      }));
+    }
+  }, [user]);
+  // ===== SUCCESS SCREEN (with Reschedule button) =====
   if (bookingResult) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
@@ -135,15 +139,20 @@ const PublicBookingWizard = () => {
             <p><span className="font-medium">Time:</span> {selectedSlot}</p>
             <p><span className="font-medium">Customer:</span> {customer.name}</p>
           </div>
+
+          {/* ===== ACTION BUTTONS ===== */}
           <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+            {/* Reschedule button */}
             <button
               onClick={() => navigate(`/reschedule/${bookingResult.bookingReference}`)}
               className="inline-flex items-center justify-center px-6 py-3 bg-indigo-100 text-indigo-700 rounded-xl hover:bg-indigo-200 transition font-medium"
             >
               Reschedule Appointment
             </button>
+
+            {/* Book Another button */}
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => navigate('/book')}
               className="inline-flex items-center justify-center px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition font-medium"
             >
               Book Another Appointment
@@ -195,11 +204,10 @@ const PublicBookingWizard = () => {
                   <div
                     key={svc._id}
                     onClick={() => setSelectedService(svc)}
-                    className={`p-4 border rounded-xl cursor-pointer transition-all ${
-                      selectedService?._id === svc._id
+                    className={`p-4 border rounded-xl cursor-pointer transition-all ${selectedService?._id === svc._id
                         ? 'border-indigo-600 bg-indigo-50 shadow-sm'
                         : 'border-gray-200 hover:border-indigo-300 hover:shadow-sm'
-                    }`}
+                      }`}
                   >
                     <div className="font-medium text-gray-900">{svc.name}</div>
                     <div className="text-sm text-gray-500">₹{svc.price} · {svc.duration} min</div>
@@ -237,11 +245,10 @@ const PublicBookingWizard = () => {
                           key={slot}
                           type="button"
                           onClick={() => setSelectedSlot(slot)}
-                          className={`p-2 text-sm rounded-xl border transition-all ${
-                            selectedSlot === slot
+                          className={`p-2 text-sm rounded-xl border transition-all ${selectedSlot === slot
                               ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-medium'
                               : 'border-gray-300 hover:border-indigo-300'
-                          }`}
+                            }`}
                         >
                           {slot}
                         </button>
@@ -350,39 +357,20 @@ const PublicBookingWizard = () => {
                     <span className="text-indigo-600">₹{selectedService?.price || 0}</span>
                   </div>
                 </div>
-
-                {/* ===== AUTH CHECK ===== */}
-                {!isAuthenticated ? (
-                  <div className="mt-6">
-                    <p className="text-sm text-gray-500 text-center mb-2">
-                      Please login to confirm your booking
-                    </p>
-                    <button
-                      onClick={() => {
-                        const redirectUrl = encodeURIComponent(window.location.pathname + window.location.search);
-                        navigate(`/login?redirect=${redirectUrl}`);
-                      }}
-                      className="w-full py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-2"
-                    >
-                      Login to Book
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={handleSubmit}
-                    disabled={!isReady || submitting}
-                    className="mt-6 w-full py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="animate-spin h-4 w-4" />
-                        Processing...
-                      </>
-                    ) : (
-                      'Confirm Booking'
-                    )}
-                  </button>
-                )}
+                <button
+                  onClick={handleSubmit}
+                  disabled={!isReady || submitting}
+                  className="mt-6 w-full py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="animate-spin h-4 w-4" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Confirm Booking'
+                  )}
+                </button>
                 {!isReady && (
                   <p className="mt-3 text-xs text-gray-400 text-center">
                     Please select a service, date, time, and fill in your details.

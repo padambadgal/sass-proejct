@@ -8,7 +8,6 @@ const ProtectedRoute = () => {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
-  // ✅ Redirect to landing page instead of /login
   return isAuthenticated ? <Outlet /> : <Navigate to="/" replace />;
 };
 

@@ -6,6 +6,7 @@ import {
   getCustomerById,
   updateCustomer,
   deleteCustomer,
+  customerBooking,
   getCustomerBookingHistory,
 } from '../controllers/customerController.js';
 
@@ -13,6 +14,8 @@ import { protect } from '../middleware/authMiddleware.js';
 import { requireActiveSubscription } from '../middleware/subscriptionMiddleware.js';
 
 const router = express.Router();
+
+router.get('/bookings', protect, customerBooking);
 
 // Find or create customer
 router.post('/find-or-create', protect, requireActiveSubscription, findOrCreateCustomer);
@@ -31,5 +34,6 @@ router.patch('/:id', protect, requireActiveSubscription, updateCustomer);
 
 // Delete customer
 router.delete('/:id', protect, requireActiveSubscription, deleteCustomer);
+
 
 export default router;

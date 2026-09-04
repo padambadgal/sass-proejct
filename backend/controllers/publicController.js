@@ -3,6 +3,8 @@ import Service from '../models/Service.js';
 import Availability from '../models/Availability.js';
 import { generateAvailableSlots } from '../services/slotService.js';
 import { createBooking } from '../services/bookingService.js';
+import Booking from '../models/Booking.js'; // ✅ Add import
+import { getAvailableSlotTimes } from '../services/slotService.js'; // ✅ Ensure import
 
 // Helper: Find business by slug and ensure it's active
 const findBusinessBySlug = async (slug) => {
@@ -277,6 +279,135 @@ export const getPublicBusinesses = async (req, res) => {
       data: businesses,
     });
   } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// @desc    Get booking by reference (customer verification)
+// @route   GET /api/public/bookings/:reference
+// @access  Public
+export const getBookingByReference = async (req, res) => {
+  try {
+    const { reference } = req.params;
+
+    // ✅ Check both query params AND request body
+    const email = req.query.email || req.body.email;
+
+    // ✅ Require at least one identifier
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide either email for verification',
+      });
+    }
+
+    const booking = await Booking.findOne({ bookingReference: reference })
+      .populate('businessId', 'name slug')
+      .populate('serviceId', 'name price duration');
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // ✅ Case‑insensitive email comparison
+    if (email && booking.customer.email.toLowerCase() !== email.toLowerCase()) {
+      return res.status(403).json({ success: false, message: 'Email does not match' });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: booking,
+    });
+  } catch (error) {
+    console.error('Get booking by reference error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// @desc    Reschedule booking (customer)
+// @route   PATCH /api/public/bookings/:reference/reschedule
+// @access  Public
+export const reschedulePublicBooking = async (req, res) => {
+  try {
+    const { reference } = req.params;
+    const { date, startTime } = req.body;
+
+    // ✅ Get email from query OR body (for flexibility)
+    const email = req.query.email || req.body.email;
+
+    // ✅ Require email
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required for verification',
+      });
+    }
+
+    const booking = await Booking.findOne({ bookingReference: reference })
+      .populate('businessId', 'name slug')
+      .populate('serviceId', 'name price duration');
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // ✅ Case‑insensitive email verification
+    if (booking.customer.email.toLowerCase() !== email.toLowerCase()) {
+      return res.status(403).json({ success: false, message: 'Email does not match' });
+    }
+
+    // Only pending/confirmed can be rescheduled
+    if (!['pending', 'confirmed'].includes(booking.status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot reschedule booking with status ${booking.status}`,
+      });
+    }
+
+    // Validate date
+    const newDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (newDate < today) {
+      return res.status(400).json({ success: false, message: 'Cannot reschedule to a past date' });
+    }
+
+    // Check availability
+    const availableSlots = await getAvailableSlotTimes(booking.businessId, booking.serviceId, date);
+    if (!availableSlots.includes(startTime)) {
+      return res.status(400).json({ success: false, message: 'Selected time slot is not available' });
+    }
+
+    // Calculate new endTime
+    const service = await Service.findById(booking.serviceId);
+    if (!service) {
+      return res.status(404).json({ success: false, message: 'Service not found' });
+    }
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const startMinutes = hours * 60 + minutes;
+    const endMinutes = startMinutes + service.duration;
+    const endHours = Math.floor(endMinutes / 60);
+    const endMins = endMinutes % 60;
+    const endTime = `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
+
+    // Update booking
+    booking.date = newDate;
+    booking.startTime = startTime;
+    booking.endTime = endTime;
+    await booking.save();
+
+    // Optionally send email notification
+
+    res.status(200).json({
+      success: true,
+      message: 'Booking rescheduled successfully',
+      data: booking,
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({ success: false, message: 'Selected time slot is not available' });
+    }
+    console.error('Reschedule public booking error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };

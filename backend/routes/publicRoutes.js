@@ -5,7 +5,9 @@ import {
   getPublicAvailability,
   getPublicSlots,
   createPublicBooking,
-  getPublicBusinesses 
+  getPublicBusinesses,
+  getBookingByReference,
+  reschedulePublicBooking
 } from '../controllers/publicController.js';
 
 const router = express.Router();
@@ -29,6 +31,7 @@ router.get('/business/:slug/slots', getPublicSlots);
 // Create booking (public)
 router.post('/business/:slug/bookings', createPublicBooking);
 
-
+router.get('/bookings/:reference', getBookingByReference);
+router.patch('/bookings/:reference/reschedule', reschedulePublicBooking);
 
 export default router;

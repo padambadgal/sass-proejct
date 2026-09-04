@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../../api/client';
 import ReactDatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
-import { Calendar, Clock, User, Mail, Phone, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, User, Mail, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const CustomerReschedule = () => {
@@ -13,7 +13,6 @@ const CustomerReschedule = () => {
   const [step, setStep] = useState('verify'); // 'verify' | 'booking' | 'success'
   const [booking, setBooking] = useState(null);
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [verifying, setVerifying] = useState(false);
 
   // Reschedule state
@@ -25,15 +24,15 @@ const CustomerReschedule = () => {
   // Verify customer identity
   const handleVerify = async (e) => {
     e.preventDefault();
-    if (!email && !phone) {
-      toast.error('Please provide email or phone');
+    if (!email) {
+      toast.error('Please provide your email');
       return;
     }
     setVerifying(true);
     try {
-      // Backend endpoint: GET /api/public/bookings/:reference?email=xxx&phone=xxx
+      // Backend endpoint: GET /api/public/bookings/:reference?email=xxx
       const res = await apiClient.get(`/public/bookings/${reference}`, {
-        params: { email, phone },
+        params: { email},
       });
       const data = res.data.data;
       setBooking(data);
@@ -77,7 +76,6 @@ const CustomerReschedule = () => {
         date: selectedDate.toISOString().split('T')[0],
         startTime: selectedSlot,
         email,
-        phone,
       });
       toast.success('Booking rescheduled successfully!');
       setStep('success');
@@ -106,7 +104,7 @@ const CustomerReschedule = () => {
             onClick={() => navigate('/book')}
             className="mt-6 inline-flex items-center px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition"
           >
-            Back to Businesses
+            Back to Home
           </button>
         </div>
       </div>
@@ -120,7 +118,7 @@ const CustomerReschedule = () => {
         <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
           <h2 className="text-2xl font-bold text-gray-900">Reschedule Your Booking</h2>
           <p className="mt-2 text-gray-600">
-            Enter the email or phone you used when booking to verify your identity.
+            Enter the email you used when booking to verify your identity.
           </p>
           <form onSubmit={handleVerify} className="mt-6 space-y-4">
             <div>
@@ -133,19 +131,6 @@ const CustomerReschedule = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="john@example.com"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Phone</label>
-              <div className="relative mt-1">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="9876543210"
                 />
               </div>
             </div>
@@ -188,7 +173,7 @@ const CustomerReschedule = () => {
               onClick={() => navigate('/book')}
               className="mt-6 px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700"
             >
-              Back to Businesses
+              Back to Home
             </button>
           </div>
         </div>

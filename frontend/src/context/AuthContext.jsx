@@ -12,14 +12,17 @@ export const AuthProvider = ({ children }) => {
   // Load user and subscription on mount
   useEffect(() => {
     const loadUserAndSubscription = async () => {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
       try {
-        // Load user
         const userRes = await apiClient.get('/auth/me');
         setUser(userRes.data.data);
-        
-        // Load subscription
         await refreshSubscription();
       } catch (err) {
+        localStorage.removeItem('authToken');
         setUser(null);
         setSubscription(null);
       } finally {
@@ -33,8 +36,8 @@ export const AuthProvider = ({ children }) => {
   const refreshSubscription = async () => {
     try {
       const res = await apiClient.get('/subscriptions/me');
-      setSubscription(res.data.data); // could be null
-    } catch (err) {
+      setSubscription(res.data.data);
+    } catch {
       setSubscription(null);
     }
   };
@@ -43,7 +46,9 @@ export const AuthProvider = ({ children }) => {
   const register = async (name, email, password) => {
     try {
       const res = await apiClient.post('/auth/register', { name, email, password });
-      setUser(res.data.data);
+      const { data, token } = res.data;
+      if (token) localStorage.setItem('authToken', token);
+      setUser(data);
       await refreshSubscription();
       toast.success('Registration successful!');
       return { success: true };
@@ -57,7 +62,9 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const res = await apiClient.post('/auth/login', { email, password });
-      setUser(res.data.data);
+      const { data, token } = res.data;
+      if (token) localStorage.setItem('authToken', token);
+      setUser(data);
       await refreshSubscription();
       toast.success('Welcome back!');
       return { success: true };
@@ -71,10 +78,10 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       await apiClient.post('/auth/logout');
+      localStorage.removeItem('authToken');
       setUser(null);
       setSubscription(null);
       toast.success('Logged out');
-      
     } catch (err) {
       toast.error('Logout failed');
     }

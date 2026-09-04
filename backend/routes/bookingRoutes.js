@@ -7,6 +7,7 @@ import {
   updateBookingStatus,
   cancelBooking,
   rescheduleBooking,
+  getOwnerBookings,
 } from '../controllers/bookingController.js';
 
 import {
@@ -19,7 +20,10 @@ import { requireActiveSubscription } from '../middleware/subscriptionMiddleware.
 
 const router = express.Router();
 
-// GET /api/bookings
+// ✅ Specific routes first
+router.get('/owner', protect, requireActiveSubscription, getOwnerBookings);
+
+// ✅ GET /api/bookings?businessId=xxx
 router.get('/', protect, requireActiveSubscription, getBookings);
 
 // POST /api/bookings
@@ -34,10 +38,10 @@ router.delete('/:id', protect, requireActiveSubscription, cancelBooking);
 // PATCH /api/bookings/:id/status
 router.patch('/:id/status', protect, requireActiveSubscription, updateBookingStatus);
 
-//Reshedule Route
-router.patch('/:id/reschedule', rescheduleBooking);
+// Reschedule Route
+router.patch('/:id/reschedule', rescheduleBooking); // ⚠️ Add protect + subscription if needed
 
-//Payment Routes
+// Payment Routes
 router.post('/:id/initiate-payment', protect, requireActiveSubscription, initiateBookingPayment);
 router.post('/:id/verify-payment', protect, requireActiveSubscription, verifyBookingPayment);
 

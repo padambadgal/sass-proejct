@@ -3,30 +3,30 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 // Public Pages
 import Landing from '../pages/Landing/Landing';
 import Pricing from '../pages/Subscription/Pricing';
+import Checkout from '../pages/Subscription/Checkout';
+import PaymentSuccess from '../pages/Subscription/PaymentSuccess';
 import Login from '../pages/Auth/Login';
 import Register from '../pages/Auth/Register';
 
-// Public Booking (Customer)
+// Customer Booking (Public)
 import BusinessListPage from '../pages/PublicBooking/BusinessListPage';
 import PublicBookingWizard from '../pages/PublicBooking/PublicBookingWizard';
 import CustomerReschedule from '../pages/PublicBooking/CustomerReschedule';
 
-// Protected Pages (require login)
-import Checkout from '../pages/Subscription/Checkout';
-import PaymentSuccess from '../pages/Subscription/PaymentSuccess';
+// Protected Components
 import ProtectedRoute from '../components/ProtectedRoute';
 import SubscriptionGuard from '../components/SubscriptionGuard';
 import Layout from '../components/Layout/Layout';
 
-// Dashboard & Business Management
+// Owner Dashboard Pages
 import Dashboard from '../pages/Dashboard/Dashboard';
 import BusinessList from '../pages/Business/BusinessList';
 import BusinessForm from '../pages/Business/BusinessForm';
 import ServiceList from '../pages/Services/ServiceList';
 import ServiceForm from '../pages/Services/ServiceForm';
 import StaffList from '../pages/Staff/StaffList';
-import StaffDetail from '../pages/Staff/StaffDetail';
 import StaffForm from '../pages/Staff/StaffForm';
+import StaffDetail from '../pages/Staff/StaffDetail';
 import AvailabilitySchedule from '../pages/Availability/AvailabilitySchedule';
 import CustomerList from '../pages/Customers/CustomerList';
 import CustomerDetail from '../pages/Customers/CustomerDetail';
@@ -35,7 +35,8 @@ import BookingList from '../pages/Bookings/BookingList';
 import BookingDetail from '../pages/Bookings/BookingDetail';
 import SubscriptionStatus from '../pages/Subscription/SubscriptionStatus';
 
-
+// Customer (Logged-in) Pages
+import MyBookings from '../pages/Customers/MyBookings';
 
 const AppRoutes = () => {
   return (
@@ -47,11 +48,12 @@ const AppRoutes = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Public Booking (Customer) */}
+        {/* Customer Booking - Public */}
         <Route path="/book" element={<BusinessListPage />} />
         <Route path="/book/:slug" element={<PublicBookingWizard />} />
-        <Route path="/reschedule/:reference" element={<CustomerReschedule />} />
 
+        {/* Customer Reschedule - Public (with reference) */}
+        <Route path="/reschedule/:reference" element={<CustomerReschedule />} />
 
         {/* ========== PROTECTED ROUTES (login required) ========== */}
         <Route element={<ProtectedRoute />}>
@@ -59,7 +61,10 @@ const AppRoutes = () => {
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />
 
-          {/* These routes need login AND active subscription */}
+          {/* Customer: My Bookings (no subscription required) */}
+          <Route path="/my-bookings" element={<MyBookings />} />
+
+          {/* ========== OWNER ROUTES (login + active subscription) ========== */}
           <Route element={<Layout />}>
             <Route element={<SubscriptionGuard />}>
               <Route path="/dashboard" element={<Dashboard />} />

@@ -1,6 +1,8 @@
 import Customer from '../models/Customer.js';
 import Business from '../models/Business.js';
 import Booking from '../models/Booking.js';
+import Service from '../models/Service.js';
+import { getAvailableSlotTimes } from '../services/slotService.js';
 
 // Helper: Check business ownership
 const validateBusinessOwnership = async (businessId, userId) => {
@@ -10,6 +12,7 @@ const validateBusinessOwnership = async (businessId, userId) => {
   }
   return business;
 };
+
 
 // @desc    Find or create a customer (used during booking)
 // @route   POST /api/customers/find-or-create
@@ -269,6 +272,20 @@ export const getCustomerBookingHistory = async (req, res, next) => {
     if (error.message === 'Business not found or you do not own it') {
       return res.status(404).json({ success: false, message: error.message });
     }
+    next(error);
+  }
+};
+
+export const customerBooking = async (req, res, next) => {
+  try {
+    const userEmail = req.user.email;
+    const bookings = await Booking.find({ 'customer.email': userEmail })
+      .populate('businessId', 'name slug')
+      .populate('serviceId', 'name price duration')
+      .sort({ date: -1, startTime: 1 });
+
+    res.status(200).json({ success: true, data: bookings });
+  } catch (error) {
     next(error);
   }
 };

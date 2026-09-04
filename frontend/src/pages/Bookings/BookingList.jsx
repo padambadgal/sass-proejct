@@ -208,15 +208,6 @@ const BookingList = () => {
                                                 <Clock size={18} className="inline" />
                                             </button>
                                         )}
-                                        {['pending', 'confirmed'].includes(b.status) && (
-                                            <button
-                                                onClick={() => setRescheduleBooking(b)}
-                                                className="text-indigo-600 hover:text-indigo-900"
-                                                title="Reschedule"
-                                            >
-                                                <RefreshCw size={18} className="inline" />
-                                            </button>
-                                        )}
                                     </td>
                                 </tr>
                             ))}

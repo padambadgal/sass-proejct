@@ -7,14 +7,40 @@ const Landing = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Top Bar with Login/Register */}
-      <div className="border-b border-gray-100">
+      {/* Navbar */}
+      <div className="border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <Link to="/" className="text-xl font-bold text-indigo-600">
+          <Link to="/" className="text-2xl font-bold text-indigo-600">
             Appoint<span className="text-gray-900">SaaS</span>
           </Link>
           <div className="flex items-center gap-3">
-            {!isAuthenticated ? (
+            {isAuthenticated ? (
+              <>
+                <Link
+                  to="/book"
+                  className="text-sm font-medium text-gray-700 hover:text-indigo-600 transition"
+                >
+                  Book
+                </Link>
+                {hasActiveSubscription && (
+                  <Link
+                    to="/dashboard"
+                    className="text-sm font-medium bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
+                  >
+                    Dashboard
+                  </Link>
+                )}
+                <button
+                  onClick={() => {
+                    localStorage.removeItem('authToken');
+                    window.location.href = '/';
+                  }}
+                  className="text-sm font-medium text-red-600 hover:text-red-700 transition"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
               <>
                 <Link
                   to="/login"
@@ -29,19 +55,12 @@ const Landing = () => {
                   Sign up
                 </Link>
               </>
-            ) : (
-              <Link
-                to="/dashboard"
-                className="text-sm font-medium bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
-              >
-                Dashboard
-              </Link>
             )}
           </div>
         </div>
       </div>
 
-      {/* Hero Section */}
+      {/* Hero */}
       <div className="relative overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-blue-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight">
@@ -72,27 +91,13 @@ const Landing = () => {
               to="/book"
               className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
             >
-              View Public Booking
+              Book an Appointment
             </Link>
           </div>
-
-          {/* Extra login/register callouts (optional) */}
-          {!isAuthenticated && (
-            <p className="mt-6 text-sm text-gray-500">
-              Already have an account?{' '}
-              <Link to="/login" className="text-indigo-600 hover:underline font-medium">
-                Log in
-              </Link>
-              {' · '}
-              <Link to="/register" className="text-indigo-600 hover:underline font-medium">
-                Create account
-              </Link>
-            </p>
-          )}
         </div>
       </div>
 
-      {/* Features Section */}
+      {/* Features */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="text-center p-6">

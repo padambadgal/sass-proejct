@@ -111,6 +111,67 @@ export const getBookings = async (req, res) => {
   }
 };
 
+// @desc    Get all bookings for all businesses owned by the logged‑in user
+// @route   GET /api/bookings/owner
+// @access  Private (authenticated + subscription check via middleware)
+export const getOwnerBookings = async (req, res) => {
+  try {
+    // 1. Get all businesses owned by the user
+    const businesses = await Business.find({ ownerId: req.user._id });
+    if (businesses.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        pagination: { total: 0, page: 1, limit: 50, pages: 0 },
+        message: 'No businesses found for this user',
+      });
+    }
+
+    const businessIds = businesses.map(b => b._id);
+
+    // 2. Apply filters from query (optional)
+    const { status, date, limit = 50, page = 1 } = req.query;
+
+    const filter = { businessId: { $in: businessIds } };
+    if (status) filter.status = status;
+    if (date) {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+      filter.date = { $gte: startOfDay, $lte: endOfDay };
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // 3. Fetch bookings with pagination
+    const bookings = await Booking.find(filter)
+      .populate('serviceId', 'name price duration')
+      .populate('staffId', 'name')
+      .populate('customerId', 'name email phone')
+      .populate('businessId', 'name slug') // Include business details
+      .sort({ date: -1, startTime: 1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Booking.countDocuments(filter);
+
+    res.status(200).json({
+      success: true,
+      data: bookings,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / parseInt(limit)),
+      },
+    });
+  } catch (error) {
+    console.error('Get owner bookings error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 // @desc    Get a single booking by ID
 // @route   GET /api/bookings/:id
 // @access  Private
