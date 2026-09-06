@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import apiClient from '../../api/client';
-import { Plus, Edit, Trash2, AlertCircle } from 'lucide-react';
+import { Plus, Edit, Power, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const ServiceList = () => {
@@ -9,12 +9,16 @@ const ServiceList = () => {
   const [selectedBusinessId, setSelectedBusinessId] = useState('');
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingBusinesses, setLoadingBusinesses] = useState(true);
+  const [togglingId, setTogglingId] = useState(null);
   const [planInfo, setPlanInfo] = useState(null);
 
   // Fetch all businesses owned by the user
   useEffect(() => {
     const fetchBusinesses = async () => {
+      setLoadingBusinesses(true);
       try {
+        // ✅ Fixed: use /business instead of /business/me
         const res = await apiClient.get('/business/me');
         setBusinesses(res.data.data);
         if (res.data.data.length > 0) {
@@ -22,6 +26,8 @@ const ServiceList = () => {
         }
       } catch (err) {
         toast.error('Failed to load businesses');
+      } finally {
+        setLoadingBusinesses(false);
       }
     };
     fetchBusinesses();
@@ -34,14 +40,15 @@ const ServiceList = () => {
       setLoading(true);
       try {
         const res = await apiClient.get(`/services?businessId=${selectedBusinessId}`);
-        setServices(res.data.data);
-        // Get plan limits – we'll call subscription endpoint or extract from the response
-        // For now, we'll fetch subscription info separately.
+        const servicesData = res.data.data || [];
+        setServices(servicesData);
+
+        // Get plan limits
         const subRes = await apiClient.get('/subscriptions/me');
         if (subRes.data.data) {
           const plan = subRes.data.data.planDetails;
           if (plan) {
-            const currentCount = res.data.data.filter(s => s.status === 'active').length;
+            const currentCount = servicesData.filter(s => s.status === 'active').length;
             setPlanInfo({
               maxServices: plan.maxServices,
               currentCount,
@@ -58,26 +65,44 @@ const ServiceList = () => {
     fetchServices();
   }, [selectedBusinessId]);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this service?')) return;
+  // Toggle service status (active ↔ inactive)
+  const handleToggleStatus = async (id, currentStatus) => {
+    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+    const action = newStatus === 'active' ? 'activate' : 'deactivate';
+    if (!window.confirm(`Are you sure you want to ${action} this service?`)) return;
+
+    setTogglingId(id);
     try {
-      await apiClient.delete(`/services/${id}`);
-      setServices(prev => prev.filter(s => s._id !== id));
-      toast.success('Service deleted');
-      // Update remaining count
+      await apiClient.patch(`/services/${id}`, { status: newStatus });
+      setServices(prev => prev.map(s => s._id === id ? { ...s, status: newStatus } : s));
+      toast.success(`Service ${action}d successfully`);
+
+      // Update plan counters
+      const activeCount = services.filter(s => s._id !== id ? s.status === 'active' : newStatus === 'active').length;
       setPlanInfo(prev => ({
         ...prev,
-        currentCount: prev.currentCount - 1,
-        remaining: prev.maxServices === Infinity ? '∞' : prev.maxServices - (prev.currentCount - 1),
+        currentCount: activeCount,
+        remaining: prev.maxServices === Infinity ? '∞' : prev.maxServices - activeCount,
       }));
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Delete failed');
+      toast.error(err.response?.data?.message || `Failed to ${action} service`);
+    } finally {
+      setTogglingId(null);
     }
   };
 
   const handleBusinessChange = (e) => {
     setSelectedBusinessId(e.target.value);
   };
+
+  // Show loader while businesses are loading
+  if (loadingBusinesses) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   if (businesses.length === 0) {
     return (
@@ -88,6 +113,15 @@ const ServiceList = () => {
         <Link to="/business/new" className="mt-4 inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md">
           Add Business
         </Link>
+      </div>
+    );
+  }
+
+  // ✅ Professional loader animation for services
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
       </div>
     );
   }
@@ -130,9 +164,7 @@ const ServiceList = () => {
         </div>
       )}
 
-      {loading ? (
-        <div className="text-center py-8">Loading...</div>
-      ) : services.length === 0 ? (
+      {services.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg shadow">
           <p className="text-gray-500">No services yet. Click "Add Service" to create one.</p>
         </div>
@@ -158,7 +190,7 @@ const ServiceList = () => {
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       svc.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}>
-                      {svc.status}
+                      {svc.status === 'active' ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
@@ -170,10 +202,17 @@ const ServiceList = () => {
                       <Edit size={18} className="inline" />
                     </Link>
                     <button
-                      onClick={() => handleDelete(svc._id)}
-                      className="text-red-600 hover:text-red-900"
+                      onClick={() => handleToggleStatus(svc._id, svc.status)}
+                      disabled={togglingId === svc._id}
+                      className={`${
+                        svc.status === 'active' ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'
+                      } disabled:opacity-50`}
                     >
-                      <Trash2 size={18} className="inline" />
+                      {togglingId === svc._id ? (
+                        <span className="inline-block animate-spin">⟳</span>
+                      ) : (
+                        <Power size={18} className="inline" />
+                      )}
                     </button>
                   </td>
                 </tr>

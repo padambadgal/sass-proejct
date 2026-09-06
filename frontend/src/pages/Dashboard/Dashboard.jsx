@@ -46,7 +46,7 @@ const Dashboard = () => {
           });
         }
       } catch (err) {
-        // No business yet - this is fine
+        toast.error('Failed to load business data');
       }
     };
     fetchBusinesses();

@@ -59,6 +59,14 @@ const bookingSchema = new mongoose.Schema(
       required: true,
       match: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
     },
+    totalPrice: {
+      type: Number,
+      default: 0,
+    },
+    duration: {
+      type: Number, // total duration in minutes
+      default: 0,
+    },
 
     status: {
       type: String,

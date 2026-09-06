@@ -47,21 +47,20 @@ const CustomerDetail = () => {
     no_show: 'bg-gray-100 text-gray-800',
   };
 
-  // Only pending/confirmed can be rescheduled
   const canReschedule = (status) => ['pending', 'confirmed'].includes(status);
 
   return (
     <div>
       <button
         onClick={() => navigate('/customers')}
-        className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900"
+        className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
       >
         <ArrowLeft size={18} /> Back to Customers
       </button>
 
       {/* Customer Info */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-2xl font-bold">{customer.name}</h1>
             <div className="mt-2 space-y-1 text-gray-600">
@@ -73,17 +72,21 @@ const CustomerDetail = () => {
           <div className="flex gap-2">
             <Link
               to={`/customers/${customer._id}/edit`}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition"
             >
               Edit
             </Link>
           </div>
         </div>
-        <div className="mt-4 pt-4 border-t flex gap-6 text-sm">
+        <div className="mt-4 pt-4 border-t flex flex-wrap gap-6 text-sm">
           <span className="text-gray-500">Total Bookings: <strong className="text-gray-900">{customer.totalBookings || 0}</strong></span>
-          <span className="text-gray-500">Status: <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-            customer.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-          }`}>{customer.status}</span></span>
+          <span className="text-gray-500">Status: 
+            <span className={`ml-1 px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+              customer.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+            }`}>
+              {customer.status}
+            </span>
+          </span>
         </div>
       </div>
 
@@ -98,6 +101,7 @@ const CustomerDetail = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
@@ -110,6 +114,7 @@ const CustomerDetail = () => {
                 {bookings.map((b) => (
                   <tr key={b._id}>
                     <td className="px-4 py-3 text-sm font-mono text-gray-900">{b.bookingReference}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{b.customer.name || '—'}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{b.serviceId?.name || '—'}</td>
                     <td className="px-4 py-3 text-sm text-gray-500">{new Date(b.date).toLocaleDateString('en-IN')}</td>
                     <td className="px-4 py-3 text-sm text-gray-500">{b.startTime} – {b.endTime}</td>
@@ -120,7 +125,7 @@ const CustomerDetail = () => {
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500">
                       <span className={`capitalize ${b.paymentStatus === 'paid' ? 'text-green-600' : 'text-gray-500'}`}>
-                        {b.paymentStatus}
+                        {b.paymentStatus || 'unpaid'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm">

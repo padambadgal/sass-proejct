@@ -1,7 +1,18 @@
 import Booking from '../models/Booking.js';
 import Business from '../models/Business.js';
+import Service from '../models/Service.js';           // Needed for reschedule
 import { createBooking as createBookingService } from '../services/bookingService.js';
-import { canCreateAppointment } from '../utils/planLimits.js';
+// import { canCreateAppointment } from '../utils/planLimits.js';
+import { getAvailableSlotTimes } from '../services/slotService.js';
+import { sendBookingStatusUpdate } from '../services/notificationService.js';
+// Allowed status transitions
+const allowedTransitions = {
+  pending: ['confirmed', 'cancelled'],
+  confirmed: ['completed', 'cancelled', 'no_show'],
+  completed: [],
+  cancelled: [],
+  no_show: [],
+};
 
 // Helper: Check business ownership
 const validateBusinessOwnership = async (businessId, userId) => {
@@ -225,6 +236,7 @@ export const updateBookingStatus = async (req, res) => {
     await validateBusinessOwnership(booking.businessId, req.user._id);
 
     // Check if transition is allowed
+    // Check if transition is allowed
     const current = booking.status;
     if (!allowedTransitions[current] || !allowedTransitions[current].includes(status)) {
       return res.status(400).json({
@@ -235,7 +247,6 @@ export const updateBookingStatus = async (req, res) => {
 
     booking.status = status;
     await booking.save();
-
     sendBookingStatusUpdate(booking, current).catch(err =>
       console.error('Email error:', err)
     );

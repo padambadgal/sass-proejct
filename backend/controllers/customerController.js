@@ -127,6 +127,7 @@ export const getCustomerById = async (req, res, next) => {
       'customer.phone': customer.phone,
     })
       .populate('serviceId', 'name price duration')
+      .populate('businessId', 'name slug')
       .sort({ date: -1, startTime: -1 })
       .limit(50); // limit to recent 50
 

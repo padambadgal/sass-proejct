@@ -36,13 +36,14 @@ const intervalsOverlap = (start1, end1, start2, end2) => {
  * @param {string} dateStr - Date in "YYYY-MM-DD" format
  * @returns {Promise<string[]>} Array of available start times in "HH:MM" format
  */
-export const generateAvailableSlots = async (businessId, serviceId, dateStr) => {
-  // 1. Validate service
+export const generateAvailableSlots = async (businessId, serviceId, dateStr, overrideDuration = null) => {
+  // 1. Validate service (only if we need it for validation)
   const service = await Service.findOne({ _id: serviceId, status: 'active' });
   if (!service) {
     throw new Error('Service not found or inactive');
   }
-  const duration = service.duration; // in minutes
+  // Use override duration if provided, otherwise use service.duration
+  const duration = overrideDuration || service.duration;
 
   // 2. Validate business
   const business = await Business.findOne({ _id: businessId, isActive: true });
@@ -123,4 +124,39 @@ export const generateAvailableSlots = async (businessId, serviceId, dateStr) => 
  */
 export const getAvailableSlotTimes = async (businessId, serviceId, dateStr) => {
   return await generateAvailableSlots(businessId, serviceId, dateStr);
+};
+
+// ... other functions
+
+/**
+ * Filter out slots that are already in the past.
+ * - For a past date: returns empty array.
+ * - For today: keeps only slots whose start time >= current time.
+ * - For future dates: returns the original array unchanged.
+ *
+ * @param {string[]} slots - Array of "HH:MM" strings
+ * @param {string} dateStr - "YYYY-MM-DD"
+ * @returns {string[]} Filtered slots
+ */
+export const filterPastSlots = (slots, dateStr) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const givenDate = new Date(dateStr + 'T00:00:00Z');
+
+  if (givenDate < today) {
+    return [];
+  }
+
+  if (givenDate.getTime() === today.getTime()) {
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    return slots.filter(slot => {
+      const [h, m] = slot.split(':').map(Number);
+      const slotMinutes = h * 60 + m;
+      return slotMinutes >= currentMinutes;
+    });
+  }
+
+  return slots;
 };

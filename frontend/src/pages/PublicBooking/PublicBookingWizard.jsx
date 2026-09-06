@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../../api/client';
 import ReactDatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
-import { Calendar, Clock, User, Mail, Phone, FileText, Check, Loader2, ArrowLeft } from 'lucide-react';
+import { Calendar, Clock, User, Mail, Phone, FileText, Check, Loader2, ArrowLeft, Plus, X, ShoppingBag } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 
@@ -15,7 +15,7 @@ const PublicBookingWizard = () => {
   // State
   const [business, setBusiness] = useState(null);
   const [services, setServices] = useState([]);
-  const [selectedService, setSelectedService] = useState(null);
+  const [selectedServices, setSelectedServices] = useState([]); // array of service objects
   const [selectedDate, setSelectedDate] = useState(null);
   const [availableSlots, setAvailableSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState('');
@@ -23,6 +23,7 @@ const PublicBookingWizard = () => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [bookingResult, setBookingResult] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Fetch business and services
   useEffect(() => {
@@ -34,9 +35,7 @@ const PublicBookingWizard = () => {
 
         const svcRes = await apiClient.get(`/public/business/${slug}/services`);
         setServices(svcRes.data.data);
-        if (svcRes.data.data.length > 0) {
-          setSelectedService(svcRes.data.data[0]);
-        }
+        // Auto-select first service (optional, we'll keep empty)
       } catch {
         toast.error('Business not found');
         navigate('/book');
@@ -47,16 +46,36 @@ const PublicBookingWizard = () => {
     fetchBusinessAndServices();
   }, [slug, navigate]);
 
-  // Fetch slots
+  // Compute totals
+  const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0);
+  const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
+
+  // Add/remove service
+  const toggleService = (service) => {
+    setSelectedServices(prev => {
+      const exists = prev.find(s => s._id === service._id);
+      if (exists) {
+        return prev.filter(s => s._id !== service._id);
+      } else {
+        return [...prev, service];
+      }
+    });
+    // Clear slot when selection changes
+    setSelectedSlot('');
+  };
+
+  // Fetch slots – depends on selectedServices (total duration) and date
   useEffect(() => {
-    if (!selectedService || !selectedDate || !business) return;
+    if (!selectedServices.length || !selectedDate || !business) return;
     const fetchSlots = async () => {
       const dateStr = selectedDate.toISOString().split('T')[0];
       setAvailableSlots([]);
       setSelectedSlot('');
       try {
+        // Pass total duration and service IDs (optional)
+        const serviceIds = selectedServices.map(s => s._id).join(',');
         const res = await apiClient.get(
-          `/public/business/${business.slug}/slots?serviceId=${selectedService._id}&date=${dateStr}`
+          `/public/business/${business.slug}/slots?serviceIds=${serviceIds}&duration=${totalDuration}&date=${dateStr}`
         );
         setAvailableSlots(res.data.data.availableSlots || []);
       } catch {
@@ -64,13 +83,17 @@ const PublicBookingWizard = () => {
       }
     };
     fetchSlots();
-  }, [selectedService, selectedDate, business]);
+  }, [selectedServices, selectedDate, business, refreshKey, totalDuration]);
 
   // Submit booking
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedSlot || !selectedDate || !selectedService || !business) {
-      toast.error('Please complete all selections');
+    if (!selectedServices.length) {
+      toast.error('Please select at least one service');
+      return;
+    }
+    if (!selectedSlot || !selectedDate) {
+      toast.error('Please select a date and time');
       return;
     }
     if (!customer.name || !customer.email || !customer.phone) {
@@ -82,7 +105,7 @@ const PublicBookingWizard = () => {
     try {
       const dateStr = selectedDate.toISOString().split('T')[0];
       const payload = {
-        serviceId: selectedService._id,
+        serviceIds: selectedServices.map(s => s._id), // array of service IDs
         date: dateStr,
         startTime: selectedSlot,
         customer: {
@@ -94,6 +117,7 @@ const PublicBookingWizard = () => {
       };
       const res = await apiClient.post(`/public/business/${business.slug}/bookings`, payload);
       setBookingResult(res.data.data);
+      setRefreshKey(prev => prev + 1);
       toast.success('Booking confirmed!');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Booking failed');
@@ -102,13 +126,15 @@ const PublicBookingWizard = () => {
     }
   };
 
+  // Redirect unauthenticated users to login
   useEffect(() => {
-  if (!isAuthenticated) {
-    toast('Please login to book an appointment'); // ✅ Correct
-    navigate('/login');
-  }
-}, [isAuthenticated, navigate]);
+    if (!isAuthenticated) {
+      toast('Please login to book an appointment');
+      navigate('/login');
+    }
+  }, [isAuthenticated, navigate]);
 
+  // Pre-fill customer details if logged in
   useEffect(() => {
     if (user) {
       setCustomer(prev => ({
@@ -118,7 +144,8 @@ const PublicBookingWizard = () => {
       }));
     }
   }, [user]);
-  // ===== SUCCESS SCREEN (with Reschedule button) =====
+
+  // ===== SUCCESS SCREEN =====
   if (bookingResult) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
@@ -134,23 +161,19 @@ const PublicBookingWizard = () => {
           </div>
           <div className="mt-4 text-sm text-gray-500 space-y-1 text-left bg-gray-50 p-4 rounded-xl">
             <p><span className="font-medium">Business:</span> {business.name}</p>
-            <p><span className="font-medium">Service:</span> {selectedService.name}</p>
+            <p><span className="font-medium">Services:</span> {selectedServices.map(s => s.name).join(', ')}</p>
+            <p><span className="font-medium">Total Duration:</span> {totalDuration} min</p>
             <p><span className="font-medium">Date:</span> {selectedDate?.toLocaleDateString('en-IN', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</p>
             <p><span className="font-medium">Time:</span> {selectedSlot}</p>
             <p><span className="font-medium">Customer:</span> {customer.name}</p>
           </div>
-
-          {/* ===== ACTION BUTTONS ===== */}
           <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-            {/* Reschedule button */}
             <button
               onClick={() => navigate(`/reschedule/${bookingResult.bookingReference}`)}
               className="inline-flex items-center justify-center px-6 py-3 bg-indigo-100 text-indigo-700 rounded-xl hover:bg-indigo-200 transition font-medium"
             >
               Reschedule Appointment
             </button>
-
-            {/* Book Another button */}
             <button
               onClick={() => navigate('/book')}
               className="inline-flex items-center justify-center px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition font-medium"
@@ -171,7 +194,7 @@ const PublicBookingWizard = () => {
     );
   }
 
-  const isReady = selectedService && selectedDate && selectedSlot && customer.name && customer.email && customer.phone;
+  const isReady = selectedServices.length > 0 && selectedDate && selectedSlot && customer.name && customer.email && customer.phone;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -196,25 +219,54 @@ const PublicBookingWizard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column – Selection */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Services */}
+            {/* Services – multi-select */}
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Choose a Service</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {services.map((svc) => (
-                  <div
-                    key={svc._id}
-                    onClick={() => setSelectedService(svc)}
-                    className={`p-4 border rounded-xl cursor-pointer transition-all ${selectedService?._id === svc._id
-                        ? 'border-indigo-600 bg-indigo-50 shadow-sm'
-                        : 'border-gray-200 hover:border-indigo-300 hover:shadow-sm'
-                      }`}
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Choose Services</h2>
+                {selectedServices.length > 0 && (
+                  <button
+                    onClick={() => setSelectedServices([])}
+                    className="text-sm text-red-600 hover:text-red-800 flex items-center gap-1"
                   >
-                    <div className="font-medium text-gray-900">{svc.name}</div>
-                    <div className="text-sm text-gray-500">₹{svc.price} · {svc.duration} min</div>
-                    {svc.description && <div className="text-xs text-gray-400 mt-1">{svc.description}</div>}
-                  </div>
-                ))}
+                    <X size={16} /> Clear All
+                  </button>
+                )}
               </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {services.map((svc) => {
+                  const isSelected = selectedServices.some(s => s._id === svc._id);
+                  return (
+                    <div
+                      key={svc._id}
+                      onClick={() => toggleService(svc)}
+                      className={`p-4 border rounded-xl cursor-pointer transition-all ${
+                        isSelected
+                          ? 'border-indigo-600 bg-indigo-50 shadow-sm'
+                          : 'border-gray-200 hover:border-indigo-300 hover:shadow-sm'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="font-medium text-gray-900">{svc.name}</div>
+                          <div className="text-sm text-gray-500">₹{svc.price} · {svc.duration} min</div>
+                          {svc.description && <div className="text-xs text-gray-400 mt-1">{svc.description}</div>}
+                        </div>
+                        {isSelected && (
+                          <div className="bg-indigo-600 text-white rounded-full p-1">
+                            <Check size={14} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {selectedServices.length > 0 && (
+                <div className="mt-4 p-3 bg-gray-50 rounded-xl text-sm">
+                  <span className="font-medium">Selected:</span> {selectedServices.map(s => s.name).join(', ')}
+                  <span className="ml-4 text-gray-500">Total: ₹{totalPrice} · {totalDuration} min</span>
+                </div>
+              )}
             </div>
 
             {/* Date & Time */}
@@ -236,6 +288,8 @@ const PublicBookingWizard = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Time Slots</label>
                   {!selectedDate ? (
                     <p className="text-sm text-gray-400 italic">Select a date first</p>
+                  ) : selectedServices.length === 0 ? (
+                    <p className="text-sm text-yellow-600">Select at least one service first</p>
                   ) : availableSlots.length === 0 ? (
                     <p className="text-sm text-yellow-600">No slots available for this date</p>
                   ) : (
@@ -245,10 +299,11 @@ const PublicBookingWizard = () => {
                           key={slot}
                           type="button"
                           onClick={() => setSelectedSlot(slot)}
-                          className={`p-2 text-sm rounded-xl border transition-all ${selectedSlot === slot
+                          className={`p-2 text-sm rounded-xl border transition-all ${
+                            selectedSlot === slot
                               ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-medium'
                               : 'border-gray-300 hover:border-indigo-300'
-                            }`}
+                          }`}
                         >
                           {slot}
                         </button>
@@ -324,23 +379,40 @@ const PublicBookingWizard = () => {
             </div>
           </div>
 
-          {/* Right Column – Booking Summary (Sticky) */}
+          {/* Right Column – Booking Summary */}
           <div className="lg:col-span-1">
             <div className="sticky top-24">
               <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                <h3 className="font-semibold text-gray-900 text-lg mb-4">Booking Summary</h3>
+                <h3 className="font-semibold text-gray-900 text-lg mb-4 flex items-center gap-2">
+                  <ShoppingBag size={18} /> Booking Summary
+                </h3>
                 <div className="space-y-4 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-500">Business</span>
                     <span className="font-medium text-gray-900">{business.name}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Service</span>
-                    <span className="font-medium text-gray-900">{selectedService?.name || '—'}</span>
+                  <div>
+                    <span className="text-gray-500">Services</span>
+                    <ul className="mt-1 space-y-1">
+                      {selectedServices.length === 0 ? (
+                        <li className="text-gray-400 italic">None selected</li>
+                      ) : (
+                        selectedServices.map(s => (
+                          <li key={s._id} className="flex justify-between text-gray-700">
+                            <span>{s.name}</span>
+                            <span>₹{s.price}</span>
+                          </li>
+                        ))
+                      )}
+                    </ul>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Duration</span>
-                    <span className="font-medium text-gray-900">{selectedService?.duration || '—'} min</span>
+                  <div className="flex justify-between border-t pt-2 font-semibold">
+                    <span className="text-gray-900">Total Duration</span>
+                    <span className="text-gray-900">{totalDuration} min</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-2 font-semibold">
+                    <span className="text-gray-900">Total</span>
+                    <span className="text-indigo-600">₹{totalPrice}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Date</span>
@@ -352,11 +424,8 @@ const PublicBookingWizard = () => {
                     <span className="text-gray-500">Time</span>
                     <span className="font-medium text-gray-900">{selectedSlot || '—'}</span>
                   </div>
-                  <div className="border-t pt-4 flex justify-between font-semibold">
-                    <span className="text-gray-900">Total</span>
-                    <span className="text-indigo-600">₹{selectedService?.price || 0}</span>
-                  </div>
                 </div>
+
                 <button
                   onClick={handleSubmit}
                   disabled={!isReady || submitting}
@@ -373,7 +442,13 @@ const PublicBookingWizard = () => {
                 </button>
                 {!isReady && (
                   <p className="mt-3 text-xs text-gray-400 text-center">
-                    Please select a service, date, time, and fill in your details.
+                    {selectedServices.length === 0
+                      ? 'Select at least one service'
+                      : !selectedDate
+                      ? 'Pick a date'
+                      : !selectedSlot
+                      ? 'Choose a time slot'
+                      : 'Fill in your details'}
                   </p>
                 )}
               </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import apiClient from '../../api/client';
-import { Eye, Plus, Edit, Trash2, AlertCircle, User } from 'lucide-react';
+import { Eye, Plus, Edit, Power, AlertCircle, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const StaffList = () => {
@@ -9,11 +9,14 @@ const StaffList = () => {
   const [selectedBusinessId, setSelectedBusinessId] = useState('');
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingBusinesses, setLoadingBusinesses] = useState(true);
+  const [togglingId, setTogglingId] = useState(null);
   const [planInfo, setPlanInfo] = useState(null);
 
   // Fetch businesses
   useEffect(() => {
     const fetchBusinesses = async () => {
+      setLoadingBusinesses(true);
       try {
         const res = await apiClient.get('/business/me');
         setBusinesses(res.data.data);
@@ -22,6 +25,8 @@ const StaffList = () => {
         }
       } catch (err) {
         toast.error('Failed to load businesses');
+      } finally {
+        setLoadingBusinesses(false);
       }
     };
     fetchBusinesses();
@@ -34,14 +39,15 @@ const StaffList = () => {
       setLoading(true);
       try {
         const res = await apiClient.get(`/staff?businessId=${selectedBusinessId}`);
-        setStaff(res.data.data);
+        const staffData = res.data.data || [];
+        setStaff(staffData);
 
         // Get plan limits
         const subRes = await apiClient.get('/subscriptions/me');
         if (subRes.data.data) {
           const plan = subRes.data.data.planDetails;
           if (plan) {
-            const currentCount = res.data.data.filter(s => s.status === 'active').length;
+            const currentCount = staffData.filter(s => s.status === 'active').length;
             setPlanInfo({
               maxStaff: plan.maxStaff,
               currentCount,
@@ -58,20 +64,29 @@ const StaffList = () => {
     fetchStaff();
   }, [selectedBusinessId]);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Deactivate this staff member?')) return;
+  // Toggle staff status (active ↔ inactive)
+  const handleToggleStatus = async (id, currentStatus) => {
+    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+    const action = newStatus === 'active' ? 'activate' : 'deactivate';
+    if (!window.confirm(`Are you sure you want to ${action} this staff member?`)) return;
+
+    setTogglingId(id);
     try {
-      await apiClient.delete(`/staff/${id}`);
-      setStaff(prev => prev.map(s => s._id === id ? { ...s, status: 'inactive' } : s));
-      toast.success('Staff deactivated');
-      // Update remaining count
+      await apiClient.patch(`/staff/${id}`, { status: newStatus });
+      setStaff(prev => prev.map(s => s._id === id ? { ...s, status: newStatus } : s));
+      toast.success(`Staff ${action}d successfully`);
+
+      // Update plan counters
+      const activeCount = staff.filter(s => s._id !== id ? s.status === 'active' : newStatus === 'active').length;
       setPlanInfo(prev => ({
         ...prev,
-        currentCount: prev.currentCount - 1,
-        remaining: prev.maxStaff === Infinity ? '∞' : prev.maxStaff - (prev.currentCount - 1),
+        currentCount: activeCount,
+        remaining: prev.maxStaff === Infinity ? '∞' : prev.maxStaff - activeCount,
       }));
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Delete failed');
+      toast.error(err.response?.data?.message || `Failed to ${action} staff`);
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -85,6 +100,15 @@ const StaffList = () => {
     return staffMember.services.map(s => s.name).join(', ');
   };
 
+  // Show loader while businesses are loading
+  if (loadingBusinesses) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
   if (businesses.length === 0) {
     return (
       <div className="text-center py-12">
@@ -94,6 +118,15 @@ const StaffList = () => {
         <Link to="/business/new" className="mt-4 inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md">
           Add Business
         </Link>
+      </div>
+    );
+  }
+
+  // Show loader while staff is loading
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
       </div>
     );
   }
@@ -136,9 +169,7 @@ const StaffList = () => {
         </div>
       )}
 
-      {loading ? (
-        <div className="text-center py-8">Loading...</div>
-      ) : staff.length === 0 ? (
+      {staff.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg shadow">
           <User className="mx-auto h-12 w-12 text-gray-400" />
           <p className="mt-2 text-gray-500">No staff members yet. Click "Add Staff" to build your team.</p>
@@ -166,7 +197,7 @@ const StaffList = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${member.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                       }`}>
-                      {member.status}
+                      {member.status === 'active' ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
@@ -185,11 +216,17 @@ const StaffList = () => {
                       <Edit size={18} className="inline" />
                     </Link>
                     <button
-                      onClick={() => handleDelete(member._id)}
-                      className="text-red-600 hover:text-red-900"
-                      disabled={member.status === 'inactive'}
+                      onClick={() => handleToggleStatus(member._id, member.status)}
+                      disabled={togglingId === member._id}
+                      className={`${
+                        member.status === 'active' ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'
+                      } disabled:opacity-50`}
                     >
-                      <Trash2 size={18} className="inline" />
+                      {togglingId === member._id ? (
+                        <span className="inline-block animate-spin">⟳</span>
+                      ) : (
+                        <Power size={18} className="inline" />
+                      )}
                     </button>
                   </td>
                 </tr>

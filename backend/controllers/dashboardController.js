@@ -26,29 +26,44 @@ const getStartAndEndOfDay = (date) => {
 export const getOverview = async (req, res) => {
   try {
     const { businessId } = req.query;
-    if (!businessId) {
-      return res.status(400).json({ success: false, message: 'businessId required' });
+
+    // ✅ If businessId is provided, validate ownership & use it
+    let businessIds = [];
+    if (businessId) {
+      await validateBusinessOwnership(businessId, req.user._id);
+      businessIds = [businessId];
+    } else {
+      // ✅ If no businessId, get all businesses owned by the user
+      const businesses = await Business.find({ ownerId: req.user._id });
+      businessIds = businesses.map(b => b._id);
+      if (businessIds.length === 0) {
+        return res.status(400).json({ success: false, message: 'No businesses found' });
+      }
     }
-    await validateBusinessOwnership(businessId, req.user._id);
 
     const today = new Date();
     const { start: startOfDay, end: endOfDay } = getStartAndEndOfDay(today);
 
-    // Total bookings (excluding cancelled)
+    // Total bookings (excluding cancelled) across all businesses
     const totalBookings = await Booking.countDocuments({
-      businessId,
+      businessId: { $in: businessIds },
       status: { $ne: 'cancelled' }
     });
 
-    // Total active customers
+    // Total active customers across all businesses
     const totalCustomers = await Customer.countDocuments({
-      businessId,
+      businessId: { $in: businessIds },
       status: 'active'
     });
 
-    // Total revenue from completed bookings
+    // ✅ Revenue from completed bookings across ALL businesses
     const revenueAgg = await Booking.aggregate([
-      { $match: { businessId, status: 'completed' } },
+      {
+        $match: {
+          businessId: { $in: businessIds },
+          status: 'completed'
+        }
+      },
       {
         $lookup: {
           from: 'services',
@@ -58,13 +73,16 @@ export const getOverview = async (req, res) => {
         }
       },
       { $unwind: '$service' },
-      { $group: { _id: null, total: { $sum: '$service.price' } } }
+      { $group: { _id: '$businessId', total: { $sum: '$service.price' } } }
     ]);
-    const totalRevenue = revenueAgg.length > 0 ? revenueAgg[0].total : 0;
 
-    // Today's bookings (pending, confirmed, completed)
+    console.log('Revenue agg result:', JSON.stringify(revenueAgg));
+    const totalRevenue = revenueAgg.length > 0 ? revenueAgg[0].total : 0;
+    console.log('Total revenue:', totalRevenue);
+
+    // Today's bookings (pending, confirmed, completed) across all businesses
     const todayBookings = await Booking.find({
-      businessId,
+      businessId: { $in: businessIds },
       date: { $gte: startOfDay, $lte: endOfDay },
       status: { $in: ['pending', 'confirmed', 'completed'] }
     })
@@ -72,11 +90,11 @@ export const getOverview = async (req, res) => {
       .populate('customerId', 'name')
       .sort({ startTime: 1 });
 
-    // Upcoming bookings (next 7 days, excluding today)
+    // Upcoming bookings (next 7 days) across all businesses
     const nextWeek = new Date(today);
     nextWeek.setDate(today.getDate() + 7);
     const upcomingBookings = await Booking.find({
-      businessId,
+      businessId: { $in: businessIds },
       date: { $gt: endOfDay, $lte: nextWeek },
       status: { $in: ['pending', 'confirmed'] }
     })
@@ -84,15 +102,15 @@ export const getOverview = async (req, res) => {
       .populate('customerId', 'name')
       .sort({ date: 1, startTime: 1 });
 
-    // Cancellation rate (last 30 days)
+    // Cancellation rate (last 30 days) across all businesses
     const thirtyDaysAgo = new Date(today);
     thirtyDaysAgo.setDate(today.getDate() - 30);
     const totalLast30 = await Booking.countDocuments({
-      businessId,
+      businessId: { $in: businessIds },
       createdAt: { $gte: thirtyDaysAgo }
     });
     const cancelledLast30 = await Booking.countDocuments({
-      businessId,
+      businessId: { $in: businessIds },
       status: 'cancelled',
       createdAt: { $gte: thirtyDaysAgo }
     });

@@ -4,7 +4,7 @@ import Availability from '../models/Availability.js';
 import { generateAvailableSlots } from '../services/slotService.js';
 import { createBooking } from '../services/bookingService.js';
 import Booking from '../models/Booking.js'; // ✅ Add import
-import { getAvailableSlotTimes } from '../services/slotService.js'; // ✅ Ensure import
+import { getAvailableSlotTimes, filterPastSlots } from '../services/slotService.js'; // ✅ Ensure import
 
 // Helper: Find business by slug and ensure it's active
 const findBusinessBySlug = async (slug) => {
@@ -127,42 +127,63 @@ export const getPublicAvailability = async (req, res) => {
 // @desc    Get public available slots
 // @route   GET /api/public/business/:slug/slots?serviceId=xxx&date=YYYY-MM-DD
 // @access  Public
+// @desc    Get public available slots (supports multiple services)
+// @route   GET /api/public/business/:slug/slots?serviceIds=xxx,yyy&duration=60&date=YYYY-MM-DD
+// @access  Public
 export const getPublicSlots = async (req, res) => {
   try {
     const { slug } = req.params;
-    const { serviceId, date } = req.query;
+    const { serviceIds, duration, date } = req.query;
 
-    if (!serviceId || !date) {
+    if (!serviceIds || !date) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide serviceId and date as query parameters',
+        message: 'Please provide serviceIds and date as query parameters',
       });
     }
 
     const business = await findBusinessBySlug(slug);
 
-    // Verify service belongs to business and is active
-    const service = await Service.findOne({
-      _id: serviceId,
-      businessId: business._id,
-      status: 'active',
-    });
-    if (!service) {
-      return res.status(404).json({
+    // Parse service IDs (comma-separated)
+    const serviceIdArray = serviceIds.split(',').filter(id => id.trim() !== '');
+    if (serviceIdArray.length === 0) {
+      return res.status(400).json({
         success: false,
-        message: 'Service not found for this business',
+        message: 'Invalid serviceIds format',
       });
     }
 
-    const slots = await generateAvailableSlots(business._id, serviceId, date);
+    // Verify all services belong to this business and are active
+    const services = await Service.find({
+      _id: { $in: serviceIdArray },
+      businessId: business._id,
+      status: 'active',
+    });
+
+    if (services.length !== serviceIdArray.length) {
+      return res.status(404).json({
+        success: false,
+        message: 'One or more services not found for this business',
+      });
+    }
+
+    // Use provided duration or compute sum from services
+    let totalDuration = duration ? parseInt(duration) : services.reduce((sum, s) => sum + s.duration, 0);
+
+    // Generate slots using the first service ID (for validation) but with total duration
+    const firstServiceId = serviceIdArray[0];
+    let slots = await generateAvailableSlots(business._id, firstServiceId, date, totalDuration);
+
+    // Filter past slots
+    slots = filterPastSlots(slots, date);
 
     res.status(200).json({
       success: true,
       data: {
         date,
-        serviceId,
-        serviceName: service.name,
-        duration: service.duration,
+        serviceIds: serviceIdArray,
+        serviceNames: services.map(s => s.name),
+        totalDuration,
         availableSlots: slots,
       },
     });
@@ -170,6 +191,7 @@ export const getPublicSlots = async (req, res) => {
     if (error.message === 'Business not found') {
       return res.status(404).json({ success: false, message: error.message });
     }
+    console.error('Get public slots error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
@@ -180,38 +202,42 @@ export const getPublicSlots = async (req, res) => {
 export const createPublicBooking = async (req, res) => {
   try {
     const { slug } = req.params;
-    const {
-      serviceId,
-      date,
-      startTime,
-      customer,
-      notes,
-      staffId,
-    } = req.body;
+    const { serviceIds, date, startTime, customer, notes, staffId } = req.body;
 
-    // Find business by slug
     const business = await findBusinessBySlug(slug);
 
-    // Validate required fields
-    if (!serviceId || !date || !startTime || !customer) {
+    if (!serviceIds || !date || !startTime || !customer) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: serviceId, date, startTime, customer',
+        message: 'Missing required fields: serviceIds, date, startTime, customer',
       });
     }
 
-    // Validate customer object has name, email, phone
-    if (!customer.name || !customer.email || !customer.phone) {
-      return res.status(400).json({
+    // Validate services
+    const services = await Service.find({
+      _id: { $in: serviceIds },
+      businessId: business._id,
+      status: 'active',
+    });
+    if (services.length !== serviceIds.length) {
+      return res.status(404).json({
         success: false,
-        message: 'Customer must have name, email, and phone',
+        message: 'One or more services not found',
       });
     }
 
-    // Use the same booking service, but set bookedBy = 'customer'
+    const totalDuration = services.reduce((sum, s) => sum + s.duration, 0);
+    const totalPrice = services.reduce((sum, s) => sum + s.price, 0);
+
+    // Primary service (for backward compatibility)
+    const primaryService = services[0];
+
     const booking = await createBooking({
       businessId: business._id,
-      serviceId,
+      serviceId: primaryService._id,          // keep for compatibility
+      serviceIds: serviceIds,                 // all service IDs
+      totalDuration,                          // override duration
+      totalPrice,                             // override price
       date,
       startTime,
       customer,
@@ -229,7 +255,7 @@ export const createPublicBooking = async (req, res) => {
         date: booking.date,
         startTime: booking.startTime,
         endTime: booking.endTime,
-        service: booking.serviceId,
+        services: services.map(s => ({ name: s.name, price: s.price, duration: s.duration })),
         business: booking.businessId,
         customer: booking.customer,
       },

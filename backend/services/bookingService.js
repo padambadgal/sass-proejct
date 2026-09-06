@@ -11,104 +11,95 @@ import { sendBookingConfirmation } from './notificationService.js';
  * Create a new booking with all validations
  */
 export const createBooking = async (bookingData) => {
-  const {
-    businessId,
-    serviceId,
-    date,
-    startTime,
-    customer: { name, email, phone },
-    notes,
-    staffId,
-    bookedBy = 'customer',
-  } = bookingData;
-
-  // 1. Validate business
-  const business = await Business.findOne({ _id: businessId, isActive: true });
-  if (!business) {
-    throw new Error('Business not found or inactive');
-  }
-
-  // 2. Validate service
-  const service = await Service.findOne({ _id: serviceId, businessId, status: 'active' });
-  if (!service) {
-    throw new Error('Service not found or inactive for this business');
-  }
-
-  // 3. Validate date is not in the past
-  const bookingDate = new Date(date);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  if (bookingDate < today) {
-    throw new Error('Cannot book for a past date');
-  }
-
-  // 4. Calculate endTime based on service duration
-  const [hours, minutes] = startTime.split(':').map(Number);
-  const startMinutes = hours * 60 + minutes;
-  const endMinutes = startMinutes + service.duration;
-  const endHours = Math.floor(endMinutes / 60);
-  const endMins = endMinutes % 60;
-  const endTime = `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
-
-  // 5. Check slot availability using slot engine
-  const availableSlots = await getAvailableSlotTimes(businessId, serviceId, date);
-  if (!availableSlots.includes(startTime)) {
-    throw new Error('Selected time slot is not available');
-  }
-
-  // 6. Check daily appointment limit
-  const canCreate = await canCreateAppointment(businessId, date);
-  if (!canCreate) {
-    throw new Error('Daily appointment limit reached for your plan');
-  }
-
-  // 7. Find or create customer
-  let customer = await Customer.findOne({
-    businessId,
-    $or: [{ email: email }, { phone: phone }],
-    status: 'active',
-  });
-
-  if (!customer) {
-    customer = await Customer.create({
-      businessId,
-      name,
-      email,
-      phone,
-      notes: notes || '',
-      status: 'active',
-      totalBookings: 0,
-    });
-  }
-
-  // 8. Generate unique booking reference
-  let reference;
-  let isUnique = false;
-  let attempts = 0;
-  while (!isUnique && attempts < 10) {
-    reference = generateBookingReference(date);
-    const existing = await Booking.findOne({ bookingReference: reference });
-    if (!existing) {
-      isUnique = true;
-    }
-    attempts++;
-  }
-  if (!isUnique) {
-    throw new Error('Failed to generate unique booking reference');
-  }
-
-  // 9. Create booking
-
-  let booking;
-
   try {
-
-    const booking = await Booking.create({
+    const {
       businessId,
       serviceId,
+      serviceIds = [serviceId],
+      totalDuration = null,
+      totalPrice = null,
+      date,
+      startTime,
+      customer,
+      notes,
+      staffId,
+      bookedBy = 'customer',
+    } = bookingData;
+
+    // 1. Validate business
+    const business = await Business.findOne({ _id: businessId, isActive: true });
+    if (!business) throw new Error('Business not found or inactive');
+
+    // 2. Validate primary service (or we can just use the first service)
+    const primaryService = await Service.findOne({ _id: serviceId, businessId, status: 'active' });
+    if (!primaryService) throw new Error('Primary service not found or inactive for this business');
+
+    // 3. Validate date
+    const bookingDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (bookingDate < today) throw new Error('Cannot book for a past date');
+
+    // 4. Use provided totalDuration, or fallback to primary service duration
+    const duration = totalDuration || primaryService.duration;
+    const price = totalPrice || primaryService.price;
+
+    // 5. Calculate endTime based on duration
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const startMinutes = hours * 60 + minutes;
+    const endMinutes = startMinutes + duration;
+    const endTime = `${String(Math.floor(endMinutes / 60)).padStart(2, '0')}:${String(endMinutes % 60).padStart(2, '0')}`;
+
+    // 6. Check slot availability using duration
+    const availableSlots = await getAvailableSlotTimes(businessId, serviceId, date);
+    if (!availableSlots.includes(startTime)) {
+      throw new Error('Selected time slot is not available');
+    }
+
+    // 7. Check daily limit (as before)
+    const canCreate = await canCreateAppointment(businessId, date);
+    if (!canCreate) throw new Error('Daily appointment limit reached for your plan');
+
+    // 8. Find or create customer
+    let customerDoc = await Customer.findOne({
+      businessId,
+      $or: [{ email: customer.email }, { phone: customer.phone }],
+      status: 'active',
+    });
+    if (!customerDoc) {
+      customerDoc = await Customer.create({
+        businessId,
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        notes: notes || '',
+        status: 'active',
+        totalBookings: 0,
+      });
+    }
+
+    // 9. Generate unique booking reference (same as before)
+    let reference;
+    let isUnique = false;
+    let attempts = 0;
+    while (!isUnique && attempts < 10) {
+      reference = generateBookingReference(date);
+      const existing = await Booking.findOne({ bookingReference: reference });
+      if (!existing) isUnique = true;
+      attempts++;
+    }
+    if (!isUnique) throw new Error('Failed to generate unique booking reference');
+
+    // 10. Create booking with all fields
+    const booking = await Booking.create({
+      businessId,
+      serviceId,              // primary (for compatibility)
+      serviceIds,             // all service IDs
+      totalPrice: price,
+      duration,
       staffId: staffId || null,
-      customer: { name, email, phone },
-      customerId: customer._id,
+      customer: { name: customer.name, email: customer.email, phone: customer.phone },
+      customerId: customerDoc._id,
       date: bookingDate,
       startTime,
       endTime,
@@ -119,14 +110,12 @@ export const createBooking = async (bookingData) => {
       bookedBy,
     });
 
-    // 10. Increment customer totalBookings
-    await Customer.findByIdAndUpdate(customer._id, { $inc: { totalBookings: 1 } });
+    // 11. Increment customer totalBookings
+    await Customer.findByIdAndUpdate(customerDoc._id, { $inc: { totalBookings: 1 } });
 
-    // 11. Populate service details for response
+    // 12. Populate for response
     await booking.populate('serviceId', 'name price duration');
     await booking.populate('businessId', 'name slug');
-    
-    sendBookingConfirmation(booking).catch(err => console.error('Email error:', err));
 
     return booking;
   } catch (error) {

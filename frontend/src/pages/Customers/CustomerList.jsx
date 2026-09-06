@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import apiClient from '../../api/client';
-import { Search, Eye, Edit, Trash2, AlertCircle, Users } from 'lucide-react';
+import { Search, Eye, Edit, Power, AlertCircle, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const CustomerList = () => {
@@ -11,10 +11,13 @@ const CustomerList = () => {
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingBusinesses, setLoadingBusinesses] = useState(true);
+  const [togglingId, setTogglingId] = useState(null);
 
   // Fetch businesses
   useEffect(() => {
     const fetchBusinesses = async () => {
+      setLoadingBusinesses(true);
       try {
         const res = await apiClient.get('/business/me');
         setBusinesses(res.data.data);
@@ -23,6 +26,8 @@ const CustomerList = () => {
         }
       } catch (err) {
         toast.error('Failed to load businesses');
+      } finally {
+        setLoadingBusinesses(false);
       }
     };
     fetchBusinesses();
@@ -61,20 +66,36 @@ const CustomerList = () => {
     setFilteredCustomers(filtered);
   }, [searchTerm, customers]);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Deactivate this customer?')) return;
+  // Toggle customer status (active ↔ inactive)
+  const handleToggleStatus = async (id, currentStatus) => {
+    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+    const action = newStatus === 'active' ? 'activate' : 'deactivate';
+    if (!window.confirm(`Are you sure you want to ${action} this customer?`)) return;
+
+    setTogglingId(id);
     try {
-      await apiClient.delete(`/customers/${id}`);
-      setCustomers(prev => prev.map(c => c._id === id ? { ...c, status: 'inactive' } : c));
-      toast.success('Customer deactivated');
+      await apiClient.patch(`/customers/${id}`, { status: newStatus });
+      setCustomers(prev => prev.map(c => c._id === id ? { ...c, status: newStatus } : c));
+      toast.success(`Customer ${action}d successfully`);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Delete failed');
+      toast.error(err.response?.data?.message || `Failed to ${action} customer`);
+    } finally {
+      setTogglingId(null);
     }
   };
 
   const handleBusinessChange = (e) => {
     setSelectedBusinessId(e.target.value);
   };
+
+  // Loader for businesses
+  if (loadingBusinesses) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   if (businesses.length === 0) {
     return (
@@ -85,6 +106,15 @@ const CustomerList = () => {
         <Link to="/business/new" className="mt-4 inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md">
           Add Business
         </Link>
+      </div>
+    );
+  }
+
+  // Loader for customers
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
       </div>
     );
   }
@@ -122,9 +152,7 @@ const CustomerList = () => {
         />
       </div>
 
-      {loading ? (
-        <div className="text-center py-8">Loading...</div>
-      ) : filteredCustomers.length === 0 ? (
+      {filteredCustomers.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg shadow">
           <Users className="mx-auto h-12 w-12 text-gray-400" />
           <p className="mt-2 text-gray-500">
@@ -152,10 +180,8 @@ const CustomerList = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.phone}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.totalBookings || 0}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      c.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {c.status}
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${c.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      {c.status === 'active' ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
@@ -172,11 +198,15 @@ const CustomerList = () => {
                       <Edit size={18} className="inline" />
                     </Link>
                     <button
-                      onClick={() => handleDelete(c._id)}
-                      className="text-red-600 hover:text-red-900"
-                      disabled={c.status === 'inactive'}
+                      onClick={() => handleToggleStatus(c._id, c.status)}
+                      disabled={togglingId === c._id}
+                      className={`${c.status === 'active' ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'} disabled:opacity-50`}
                     >
-                      <Trash2 size={18} className="inline" />
+                      {togglingId === c._id ? (
+                        <span className="inline-block animate-spin">⟳</span>
+                      ) : (
+                        <Power size={18} className="inline" />
+                      )}
                     </button>
                   </td>
                 </tr>
