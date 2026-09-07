@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import apiClient from '../../api/client';
-import { Plus, Edit, Power, ExternalLink } from 'lucide-react';
+import { Plus, Edit, Power, ExternalLink, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const BusinessList = () => {

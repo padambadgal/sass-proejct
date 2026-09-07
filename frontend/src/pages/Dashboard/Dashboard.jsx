@@ -220,7 +220,7 @@ const Dashboard = () => {
             <ul className="space-y-2">
               {overview.todayBookings.map((b) => (
                 <li key={b._id} className="flex justify-between items-center border-b pb-1 text-sm">
-                  <span className="font-medium">{b.customerId?.name || 'Guest'}</span>
+                  <span className="font-medium">{b.customerId?.name || b.customer?.name || 'Guest'}</span>
                   <span className="text-gray-500">{b.startTime}</span>
                 </li>
               ))}
@@ -235,7 +235,7 @@ const Dashboard = () => {
             <ul className="space-y-2">
               {overview.upcomingBookings.map((b) => (
                 <li key={b._id} className="flex justify-between items-center border-b pb-1 text-sm">
-                  <span className="font-medium">{b.customerId?.name || 'Guest'}</span>
+                  <span className="font-medium">{b.customerId?.name || b.customer?.name || 'Guest'}</span>
                   <span className="text-gray-500">{format(new Date(b.date), 'dd MMM')} {b.startTime}</span>
                 </li>
               ))}

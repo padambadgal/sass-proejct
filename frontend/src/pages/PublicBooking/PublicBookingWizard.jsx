@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 
 const PublicBookingWizard = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, loading: authLoading } = useAuth();
   const { slug } = useParams();
   const navigate = useNavigate();
 
@@ -128,11 +128,11 @@ const PublicBookingWizard = () => {
 
   // Redirect unauthenticated users to login
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!authLoading && !isAuthenticated) {
       toast('Please login to book an appointment');
       navigate('/login');
     }
-  }, [isAuthenticated, navigate]);
+  }, [authLoading, isAuthenticated, navigate]);
 
   // Pre-fill customer details if logged in
   useEffect(() => {
@@ -209,7 +209,7 @@ const PublicBookingWizard = () => {
             onClick={() => navigate('/book')}
             className="flex items-center gap-1 text-sm bg-white/20 px-4 py-2 rounded-xl hover:bg-white/30 transition"
           >
-            <ArrowLeft size={16} /> Change Business
+            <ArrowLeft size={16} /> Back to Businesses
           </button>
         </div>
       </div>

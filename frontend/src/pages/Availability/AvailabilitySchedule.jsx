@@ -135,6 +135,7 @@ const AvailabilitySchedule = () => {
         days: daysPayload,
       });
       toast.success('Availability saved successfully!');
+      
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to save availability');
     } finally {
@@ -235,11 +236,10 @@ const AvailabilitySchedule = () => {
                     type="checkbox"
                     checked={day.isOpen}
                     onChange={(e) => updateDay(index, 'isOpen', e.target.checked)}
-                    className="sr-only peer"
+                    className="peer sr-only"
                   />
-                  <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-indigo-600 transition-colors">
-                    <div className="w-5 h-5 bg-white rounded-full shadow-md transform transition-transform translate-x-0.5 peer-checked:translate-x-5"></div>
-                  </div>
+                  <span className="h-6 w-11 rounded-full bg-gray-200 transition-colors peer-checked:bg-indigo-600 peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-500 peer-focus-visible:ring-offset-2" aria-hidden="true"></span>
+                  <span className="pointer-events-none absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-md transition-transform peer-checked:translate-x-5" aria-hidden="true"></span>
                 </label>
               </div>
 

@@ -1,5 +1,6 @@
 import Business from '../models/Business.js';
 import { canCreateBusiness, getPlanLimitsForUser } from '../utils/planLimits.js';
+import Availability from '../models/Availability.js';
 
 // Helper to generate unique slug (in case of duplicates)
 const generateUniqueSlug = async (baseSlug) => {
@@ -15,62 +16,84 @@ const generateUniqueSlug = async (baseSlug) => {
 // @desc    Create a new business
 // @route   POST /api/business
 // @access  Private (requires active subscription)
-export const createBusiness = async (req, res, next) => {
+export const createBusiness = async (req, res) => {
   try {
-    const { name, description, phone, email, address, timezone, bankAccount, logo } = req.body;
+    const { name, slug, phone, address, description, logo } = req.body;
 
-    // Check if user can create another business (plan limit)
-    const canCreate = await canCreateBusiness(req.user._id);
-    if (!canCreate) {
-      return res.status(403).json({
-        success: false,
-        message: 'Business limit reached for your current plan. Please upgrade to add more businesses.',
-      });
-    }
-
-    // Generate slug from name
-    let baseSlug = name
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-');
-    // Ensure uniqueness
-    const slug = await generateUniqueSlug(baseSlug);
-
-    // Build business object
-    const businessData = {
-      name,
-      slug,
-      description: description || '',
-      phone: phone || '',
-      email: email || '',
-      address: address || {},
-      timezone: timezone || 'Asia/Kolkata',
-      bankAccount: bankAccount || {},
-      logo: logo || null,
-      ownerId: req.user._id,
-    };
-
-    const business = await Business.create(businessData);
-
-    res.status(201).json({
-      success: true,
-      message: 'Business created successfully',
-      data: business,
-    });
-  } catch (error) {
-    // Handle duplicate slug error (though our generateUniqueSlug should prevent it)
-    if (error.code === 11000 && error.keyPattern?.slug) {
+    // 1. Validate required fields
+    if (!name || !slug || !phone) {
       return res.status(400).json({
         success: false,
-        message: 'Slug already exists, please try a different business name.',
+        message: 'Name, slug and phone are required'
       });
     }
-    next(error); // Let global error handler manage others
+
+    // 2. Check for duplicate slug
+    const existing = await Business.findOne({ slug });
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: 'Business with this slug already exists'
+      });
+    }
+
+    // 3. Create the business
+    const business = new Business({
+      name,
+      slug,
+      phone,
+      address,
+      description,
+      logo,
+      ownerId: req.user._id,
+      isActive: true,
+    });
+    await business.save();
+
+    // 4. Create default availability for 7 days
+    const defaultDays = [
+      { dayOfWeek: 0, isOpen: false }, // Sunday – closed
+      { dayOfWeek: 1, isOpen: true, startTime: '09:00', endTime: '18:00' },
+      { dayOfWeek: 2, isOpen: true, startTime: '09:00', endTime: '18:00' },
+      { dayOfWeek: 3, isOpen: true, startTime: '09:00', endTime: '18:00' },
+      { dayOfWeek: 4, isOpen: true, startTime: '09:00', endTime: '18:00' },
+      { dayOfWeek: 5, isOpen: true, startTime: '09:00', endTime: '18:00' },
+      { dayOfWeek: 6, isOpen: false }, // Saturday – closed
+    ];
+
+    const availabilityDocs = defaultDays.map(day => ({
+      businessId: business._id,
+      dayOfWeek: day.dayOfWeek,
+      isOpen: day.isOpen,
+      startTime: day.startTime || '09:00',
+      endTime: day.endTime || '18:00',
+      breaks: [],
+    }));
+
+    // Insert all availability records in one bulk operation
+    await Availability.insertMany(availabilityDocs);
+
+    // 5. Send response
+    res.status(201).json({
+      success: true,
+      message: 'Business created with default working hours',
+      data: {
+        business,
+        availability: availabilityDocs // optional
+      }
+    });
+
+  } catch (error) {
+    // If any error occurs, optionally delete the business to keep data clean
+    // (MongoDB doesn't have auto-rollback for two separate operations)
+    // We can handle it gracefully:
+    console.error('Error creating business:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create business. Please try again.'
+    });
   }
 };
-
 // @desc    Get all businesses for the logged‑in user
 // @route   GET /api/business/me
 // @access  Private
@@ -89,7 +112,7 @@ export const getMyBusinesses = async (req, res, next) => {
 // @desc    Get a single business by ID (owner only)
 // @route   GET /api/business/:id
 // @access  Private
-export const getBusinessById = async (req, res,next) => {
+export const getBusinessById = async (req, res, next) => {
   try {
     const business = await Business.findById(req.params.id);
     if (!business) {
@@ -121,7 +144,7 @@ export const getBusinessById = async (req, res,next) => {
 // @desc    Update a business
 // @route   PATCH /api/business/:id
 // @access  Private
-export const updateBusiness = async (req, res,next) => {
+export const updateBusiness = async (req, res, next) => {
   try {
     let business = await Business.findById(req.params.id);
     if (!business) {
@@ -209,3 +232,5 @@ export const deleteBusiness = async (req, res, next) => {
     next(error);
   }
 };
+
+

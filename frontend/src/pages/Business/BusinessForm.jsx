@@ -6,8 +6,22 @@ import { z } from 'zod';
 import apiClient from '../../api/client';
 import toast from 'react-hot-toast';
 
+// Helper: generate slug from name
+const generateSlug = (name) => {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // remove special chars
+    .replace(/[\s_-]+/g, '-')  // replace spaces and underscores with dash
+    .replace(/^-+|-+$/g, '');  // trim leading/trailing dashes
+};
+
 const businessSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
+  slug: z.string()
+    .min(1, 'Slug is required')
+    .max(50)
+    .regex(/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens'),
   description: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
@@ -27,10 +41,11 @@ const BusinessForm = () => {
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(false);
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm({
+  const { register, handleSubmit, watch, setValue, formState: { errors }, reset } = useForm({
     resolver: zodResolver(businessSchema),
     defaultValues: {
       name: '',
+      slug: '',
       description: '',
       phone: '',
       email: '',
@@ -38,6 +53,16 @@ const BusinessForm = () => {
       timezone: 'Asia/Kolkata',
     },
   });
+
+  const name = watch('name');
+
+  // Auto-generate slug from name when creating new business
+  useEffect(() => {
+    if (!id && name) {
+      const generated = generateSlug(name);
+      setValue('slug', generated, { shouldValidate: true });
+    }
+  }, [name, id, setValue]);
 
   // Fetch business data if editing
   useEffect(() => {
@@ -48,6 +73,7 @@ const BusinessForm = () => {
           const data = res.data.data;
           reset({
             name: data.name || '',
+            slug: data.slug || '',
             description: data.description || '',
             phone: data.phone || '',
             email: data.email || '',
@@ -67,8 +93,9 @@ const BusinessForm = () => {
         await apiClient.patch(`/business/${id}`, data);
         toast.success('Business updated');
       } else {
-        await apiClient.post('/business', data);
-        toast.success('Business created');
+        const res = await apiClient.post('/business', data);
+        // The backend returns a message about default availability
+        toast.success(res.data.message || 'Business created with default working hours!');
       }
       navigate('/business');
     } catch (err) {
@@ -84,6 +111,7 @@ const BusinessForm = () => {
     <div className="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow">
       <h1 className="text-2xl font-bold mb-6">{id ? 'Edit Business' : 'Add Business'}</h1>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {/* Business Name */}
         <div>
           <label className="block text-sm font-medium text-gray-700">Business Name *</label>
           <input
@@ -93,6 +121,26 @@ const BusinessForm = () => {
           {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
         </div>
 
+        {/* Slug – Auto-generated, editable for new, read-only for edit */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Slug (URL identifier) *
+            {!id && <span className="text-xs text-gray-400 ml-2">(auto-generated from name)</span>}
+          </label>
+          <input
+            {...register('slug')}
+            readOnly={!!id}
+            className={`mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 ${id ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+          />
+          {errors.slug && <p className="text-red-500 text-xs mt-1">{errors.slug.message}</p>}
+          {!id && (
+            <p className="text-xs text-gray-400 mt-1">
+              This will be used in your public booking URL: <span className="font-mono">/book/your-slug</span>
+            </p>
+          )}
+        </div>
+
+        {/* Description */}
         <div>
           <label className="block text-sm font-medium text-gray-700">Description</label>
           <textarea
@@ -102,6 +150,7 @@ const BusinessForm = () => {
           />
         </div>
 
+        {/* Phone & Email */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">Phone</label>
@@ -121,6 +170,7 @@ const BusinessForm = () => {
           </div>
         </div>
 
+        {/* Address */}
         <div>
           <label className="block text-sm font-medium text-gray-700">Address</label>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-1">
@@ -152,6 +202,7 @@ const BusinessForm = () => {
           </div>
         </div>
 
+        {/* Timezone */}
         <div>
           <label className="block text-sm font-medium text-gray-700">Timezone</label>
           <select
@@ -163,10 +214,10 @@ const BusinessForm = () => {
             <option value="America/New_York">America/New_York</option>
             <option value="Europe/London">Europe/London</option>
             <option value="Australia/Sydney">Australia/Sydney</option>
-            {/* Add more as needed */}
           </select>
         </div>
 
+        {/* Buttons */}
         <div className="flex justify-end gap-3 pt-4">
           <button
             type="button"

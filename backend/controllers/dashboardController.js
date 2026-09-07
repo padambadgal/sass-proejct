@@ -3,6 +3,7 @@ import Customer from '../models/Customer.js';
 import Service from '../models/Service.js';
 import Business from '../models/Business.js';
 import { jsonToCSV } from '../utils/csvHelper.js';
+import mongoose from 'mongoose';
 
 // Helper: check business ownership
 const validateBusinessOwnership = async (businessId, userId) => {
@@ -31,7 +32,7 @@ export const getOverview = async (req, res) => {
     let businessIds = [];
     if (businessId) {
       await validateBusinessOwnership(businessId, req.user._id);
-      businessIds = [businessId];
+      businessIds = [new mongoose.Types.ObjectId(businessId)];
     } else {
       // ✅ If no businessId, get all businesses owned by the user
       const businesses = await Business.find({ ownerId: req.user._id });
@@ -65,15 +66,11 @@ export const getOverview = async (req, res) => {
         }
       },
       {
-        $lookup: {
-          from: 'services',
-          localField: 'serviceId',
-          foreignField: '_id',
-          as: 'service'
+        $group: {
+          _id: null,
+          total: { $sum: '$totalPrice' }
         }
-      },
-      { $unwind: '$service' },
-      { $group: { _id: '$businessId', total: { $sum: '$service.price' } } }
+      }
     ]);
 
     console.log('Revenue agg result:', JSON.stringify(revenueAgg));
@@ -151,6 +148,7 @@ export const getBookingsByPeriod = async (req, res) => {
       return res.status(400).json({ success: false, message: 'businessId required' });
     }
     await validateBusinessOwnership(businessId, req.user._id);
+    const businessObjectId = new mongoose.Types.ObjectId(businessId);
 
     let startDate, endDate;
     const baseDate = date ? new Date(date) : new Date();
@@ -251,7 +249,7 @@ export const getRevenueByPeriod = async (req, res) => {
     const revenueAgg = await Booking.aggregate([
       {
         $match: {
-          businessId,
+          businessId: businessObjectId,
           date: { $gte: startDate, $lte: endDate },
           status: 'completed'
         }
@@ -305,9 +303,10 @@ export const getPopularServices = async (req, res) => {
       return res.status(400).json({ success: false, message: 'businessId required' });
     }
     await validateBusinessOwnership(businessId, req.user._id);
+    const businessObjectId = new mongoose.Types.ObjectId(businessId);
 
     const popular = await Booking.aggregate([
-      { $match: { businessId, status: { $ne: 'cancelled' } } },
+      { $match: { businessId: businessObjectId, status: { $ne: 'cancelled' } } },
       { $group: { _id: '$serviceId', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: parseInt(limit) },

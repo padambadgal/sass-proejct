@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import apiClient from '../../api/client';
-import { Calendar, RefreshCw, Loader2 } from 'lucide-react';
+import { Calendar, RefreshCw, Loader2, Clock, MapPin, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const MyBookings = () => {
@@ -28,7 +28,6 @@ const MyBookings = () => {
   }, [refreshKey]);
 
   const handleReschedule = (booking) => {
-    // Navigate to the customer reschedule page using the booking reference
     navigate(`/reschedule/${booking.bookingReference}`);
   };
 
@@ -49,16 +48,19 @@ const MyBookings = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">My Bookings</h1>
-        <Link to="/book" className="text-indigo-600 hover:underline text-sm">
+    <div className="max-w-6xl mx-auto p-4 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">My Bookings</h1>
+        <Link
+          to="/book"
+          className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition"
+        >
           + Book New
         </Link>
       </div>
 
       {bookings.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-xl shadow-sm">
+        <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-gray-100">
           <Calendar className="mx-auto h-12 w-12 text-gray-300" />
           <p className="mt-2 text-gray-500">You have no bookings yet.</p>
           <Link to="/book" className="mt-4 inline-block text-indigo-600 hover:underline">
@@ -66,52 +68,93 @@ const MyBookings = () => {
           </Link>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Business</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {bookings.map((b) => {
-                  const canReschedule = ['pending', 'confirmed'].includes(b.status);
-                  return (
-                    <tr key={b._id}>
-                      <td className="px-6 py-4 text-sm font-mono text-gray-900">{b.bookingReference}</td>
-                      <td className="px-6 py-4 text-sm text-gray-900">{b.businessId?.name || '—'}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{b.serviceId?.name || '—'}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{new Date(b.date).toLocaleDateString('en-IN')}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{b.startTime} – {b.endTime}</td>
-                      <td className="px-6 py-4 text-sm">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[b.status] || 'bg-gray-100 text-gray-800'}`}>
+        <>
+          {/* ===== Desktop Table (hidden on small screens) ===== */}
+          <div className="hidden md:block bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Business</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {bookings.map((b) => {
+                    const canReschedule = ['pending', 'confirmed'].includes(b.status);
+                    return (
+                      <tr key={b._id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm font-mono text-gray-900">{b.bookingReference}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{b.businessId?.name || '—'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-500">{b.serviceId?.name || '—'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-500">{new Date(b.date).toLocaleDateString('en-IN')}</td>
+                        <td className="px-4 py-3 text-sm text-gray-500">{b.startTime} – {b.endTime}</td>
+                        <td className="px-4 py-3 text-sm">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[b.status] || 'bg-gray-100 text-gray-800'}`}>
+                            {b.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {canReschedule && (
+                            <button
+                              onClick={() => handleReschedule(b)}
+                              className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1"
+                            >
+                              <RefreshCw size={16} /> Reschedule
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* ===== Mobile Cards (visible only on small screens) ===== */}
+          <div className="md:hidden space-y-4">
+            {bookings.map((b) => {
+              const canReschedule = ['pending', 'confirmed'].includes(b.status);
+              return (
+                <div key={b._id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-indigo-600 font-semibold">{b.bookingReference}</span>
+                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${statusColors[b.status] || 'bg-gray-100 text-gray-800'}`}>
                           {b.status}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        {canReschedule && (
-                          <button
-                            onClick={() => handleReschedule(b)}
-                            className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1"
-                          >
-                            <RefreshCw size={16} /> Reschedule
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      </div>
+                      <div className="text-gray-700 font-medium">{b.businessId?.name || '—'}</div>
+                      <div className="text-gray-500">{b.serviceId?.name || '—'}</div>
+                      <div className="text-gray-500 flex items-center gap-1">
+                        <Calendar size={14} className="text-indigo-400" />
+                        {new Date(b.date).toLocaleDateString('en-IN')}
+                        <span className="mx-1">·</span>
+                        <Clock size={14} className="text-indigo-400" />
+                        {b.startTime} – {b.endTime}
+                      </div>
+                    </div>
+                    {canReschedule && (
+                      <button
+                        onClick={() => handleReschedule(b)}
+                        className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                      >
+                        <RefreshCw size={16} /> Reschedule
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
+        </>
       )}
     </div>
   );
