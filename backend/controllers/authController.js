@@ -5,35 +5,60 @@ import bcrypt from "bcryptjs";
 
 export const register = async (req, res) => {
     try {
-        const { name, email, password, role } = req.body;
+        const { name, email, password, role, phone } = req.body;
         if (!name || !email || !password) {
-            return res.status(400).json({ message: 'Please provide all required fields' });
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide all required fields',
+            });
         }
 
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            return res.status(400).json({ message: 'User already exists' });
+            return res.status(400).json({ success: false, message: 'User already exists' });
         }
-
         if (password.length < 6) {
-            return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+            return res.status(400).json({
+                success: false,
+                message: 'Password must be at least 6 characters long',
+            });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
-
         const user = await User.create({
             name,
             email,
             password: hashedPassword,
-            role
+            role: ['owner', 'staff', 'customer'].includes(role) ? role : 'owner',
+            phone: phone || '',
         });
 
-        res.status(201).json({ message: 'User created successfully', user });
+        // ✅ Auto-login on register
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
 
+        res.status(201).json({
+            success: true,
+            message: 'User created successfully',
+            data: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                phone: user.phone,
+            },
+            token,
+        });
     } catch (error) {
-        res.status(500).json({ message: 'Server error' });
+        console.error('Register error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
     }
-}
+};
 
 export const login = async (req, res) => {
     try {
@@ -84,6 +109,8 @@ export const login = async (req, res) => {
                 id: existingUser._id,
                 email: existingUser.email,
                 name: existingUser.name,
+                role: existingUser.role,        // ✅ add
+                phone: existingUser.phone,
             },
             token: token,
         });

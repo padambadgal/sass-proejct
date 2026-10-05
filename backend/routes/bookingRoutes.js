@@ -41,7 +41,12 @@ router.delete('/:id', protect, requireActiveSubscription, cancelBooking);
 router.patch('/:id/status', protect, requireActiveSubscription, updateBookingStatus);
 
 // Reschedule Route
-router.patch('/:id/reschedule', rescheduleBooking); // ⚠️ Add protect + subscription if needed
+router.patch(
+  '/:id/reschedule',
+  protect,
+  requireActiveSubscription,
+  rescheduleBooking
+);
 
 // Payment Routes
 router.post('/:id/initiate-payment', protect, requireActiveSubscription, initiateBookingPayment);

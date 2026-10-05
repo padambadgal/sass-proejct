@@ -1,12 +1,15 @@
 import express from 'express';
+import http from 'http';
 import connectDB from './config/db.js';
 import 'dotenv/config';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import { connectRedis } from './config/redis.js';
+import { initSocket } from './config/socket.js';
 
-
+// Routes
 import userRouter from './routes/authRouter.js';
 import subscriptionRouter from './routes/subscriptionRouter.js';
 import paymentRouter from './routes/paymentRoutes.js';
@@ -19,47 +22,55 @@ import customerRoutes from './routes/customerRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import publicRoutes from './routes/publicRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
 
 import { errorHandler } from './middleware/errorMiddleware.js';
 
-
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 
-connectDB();
+// ✅ Init services
+await connectDB();
+await connectRedis();
+initSocket(server);
 
+// ✅ Webhook raw body FIRST (before json parser)
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 
-app.use(cors({
+// ✅ CORS
+app.use(
+  cors({
     origin: 'http://localhost:5173',
     credentials: true,
-}));
+  })
+);
 
 app.use(helmet());
 app.use(express.json());
 app.use(cookieParser());
 
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
-    message: { success: false, message: 'Too many requests from this IP, please try again later.' },
-    standardHeaders: true,
-    legacyHeaders: false,
+// ✅ Rate limiting
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { success: false, message: 'Too many auth attempts, try again later.' },
 });
-app.use('/api/auth', limiter);
-
 const globalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 500,
-    message: { success: false, message: 'Too many requests, please slow down.' }
+  windowMs: 15 * 60 * 1000,
+  max: 500,
+  message: { success: false, message: 'Too many requests, please slow down.' },
 });
+
+app.use('/api/auth', authLimiter);
 app.use('/api', globalLimiter);
 
+// ✅ Routes
 app.use('/api/auth', userRouter);
 app.use('/api/subscriptions', subscriptionRouter);
 app.use('/api/payments', paymentRouter);
 app.use('/api/business', businessRoutes);
-app.use('/api/services', serviceRoutes)
+app.use('/api/services', serviceRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/availability', availabilityRoutes);
 app.use('/api/slots', slotRoutes);
@@ -67,19 +78,19 @@ app.use('/api/customers', customerRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/upload', uploadRoutes);
 
-
-app.use((req, res, next) => {
-    res.status(404).json({
-        success: false,
-        message: `Route ${req.originalUrl} not found`,
-    });
+// 404
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.originalUrl} not found`,
+  });
 });
 
-// ✅ 7. Global Error Handler (MUST be the last middleware)
+// Error handler
 app.use(errorHandler);
 
-
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });

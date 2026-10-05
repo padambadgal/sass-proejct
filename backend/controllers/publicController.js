@@ -1,11 +1,9 @@
 import Business from '../models/Business.js';
 import Service from '../models/Service.js';
 import Availability from '../models/Availability.js';
-import { generateAvailableSlots } from '../services/slotService.js';
+import Booking from '../models/Booking.js';
+import {generateAvailableSlots,getAvailableSlotTimes,filterPastSlots,} from '../services/slotService.js';
 import { createBooking } from '../services/bookingService.js';
-import Booking from '../models/Booking.js'; // ✅ Add import
-import { getAvailableSlotTimes, filterPastSlots } from '../services/slotService.js'; // ✅ Ensure import
-
 // Helper: Find business by slug and ensure it's active
 const findBusinessBySlug = async (slug) => {
   const business = await Business.findOne({ slug, isActive: true });
@@ -143,17 +141,11 @@ export const getPublicSlots = async (req, res) => {
     }
 
     const business = await findBusinessBySlug(slug);
-
-    // Parse service IDs (comma-separated)
-    const serviceIdArray = serviceIds.split(',').filter(id => id.trim() !== '');
+    const serviceIdArray = serviceIds.split(',').filter((id) => id.trim());
     if (serviceIdArray.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid serviceIds format',
-      });
+      return res.status(400).json({ success: false, message: 'Invalid serviceIds format' });
     }
 
-    // Verify all services belong to this business and are active
     const services = await Service.find({
       _id: { $in: serviceIdArray },
       businessId: business._id,
@@ -167,14 +159,16 @@ export const getPublicSlots = async (req, res) => {
       });
     }
 
-    // Use provided duration or compute sum from services
-    let totalDuration = duration ? parseInt(duration) : services.reduce((sum, s) => sum + s.duration, 0);
+    const totalDuration =
+      duration ? parseInt(duration) : services.reduce((s, sv) => s + sv.duration, 0);
 
-    // Generate slots using the first service ID (for validation) but with total duration
     const firstServiceId = serviceIdArray[0];
-    let slots = await generateAvailableSlots(business._id, firstServiceId, date, totalDuration);
-
-    // Filter past slots
+    let slots = await generateAvailableSlots(
+      business._id,
+      firstServiceId,
+      date,
+      totalDuration // ✅ pass duration
+    );
     slots = filterPastSlots(slots, date);
 
     res.status(200).json({
@@ -182,7 +176,7 @@ export const getPublicSlots = async (req, res) => {
       data: {
         date,
         serviceIds: serviceIdArray,
-        serviceNames: services.map(s => s.name),
+        serviceNames: services.map((s) => s.name),
         totalDuration,
         availableSlots: slots,
       },

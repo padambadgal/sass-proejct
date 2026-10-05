@@ -201,8 +201,11 @@ export const getBookingById = async (req, res) => {
       });
     }
 
-    await validateBusinessOwnership(booking.businessId, req.user._id);
-
+    // ✅ NEW — handle populated businessId
+    const businessIdStr =
+      booking.businessId?._id?.toString() || booking.businessId?.toString();
+    await validateBusinessOwnership(businessIdStr, req.user._id);
+    
     res.status(200).json({
       success: true,
       data: booking,

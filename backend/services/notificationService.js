@@ -1,9 +1,12 @@
 import nodemailer from 'nodemailer';
-import { generateBookingConfirmationHTML, generateBookingStatusHTML } from '../utils/emailTemplates.js';
+import twilio from 'twilio';
+import {
+  generateBookingConfirmationHTML,
+  generateBookingStatusHTML,
+} from '../utils/emailTemplates.js';
+import { emitToBusiness } from '../config/socket.js';
 
-
-
-// Create transporter
+// ---------- Email ----------
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -12,70 +15,122 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Verify connection
-transporter.verify((error, success) => {
-  if (error) {
-    console.error('Email transporter error:', error);
-  } else {
-    console.log('Email transporter ready');
-  }
+transporter.verify((error) => {
+  if (error) console.error('Email transporter error:', error);
+  else console.log('✅ Email transporter ready');
 });
 
-/**
- * Send a booking confirmation email to the customer
- */
-export const sendBookingConfirmation = async (booking) => {
+// ---------- Twilio ----------
+let twilioClient = null;
+if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+  twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+  console.log('✅ Twilio client ready');
+} else {
+  console.warn('⚠️  Twilio credentials missing. SMS disabled.');
+}
+
+// ---------- Helpers ----------
+const sendSMS = async (to, body) => {
+  if (!twilioClient || !process.env.TWILIO_PHONE_NUMBER) return;
   try {
-    // Populate necessary fields
-    await booking.populate('serviceId', 'name price duration');
-    await booking.populate('businessId', 'name slug');
+    await twilioClient.messages.create({
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to,
+      body,
+    });
+    console.log(`✅ SMS sent to ${to}`);
+  } catch (err) {
+    console.error('SMS error:', err.message);
+  }
+};
 
-    const customerEmail = booking.customer.email;
-    if (!customerEmail) {
-      console.log('No customer email, skipping notification');
-      return;
-    }
-
-    const html = generateBookingConfirmationHTML(booking);
-    const subject = `Booking Confirmation: ${booking.bookingReference}`;
-
+const sendEmail = async (to, subject, html) => {
+  if (!to) return;
+  try {
     await transporter.sendMail({
-      from: process.env.EMAIL_FROM,
-      to: customerEmail,
+      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+      to,
       subject,
       html,
     });
+    console.log(`✅ Email sent to ${to}`);
+  } catch (err) {
+    console.error('Email error:', err.message);
+  }
+};
 
-    console.log(`✅ Confirmation email sent to ${customerEmail} for booking ${booking.bookingReference}`);
-  } catch (error) {
-    console.error('Error sending booking confirmation email:', error);
-    // We don't throw error to avoid breaking the flow
+// ---------- Public API ----------
+
+/**
+ * On new booking created
+ */
+export const sendBookingConfirmation = async (booking) => {
+  await booking.populate('serviceId', 'name price duration');
+  await booking.populate('businessId', 'name slug');
+
+  const email = booking.customer?.email;
+  const phone = booking.customer?.phone;
+
+  // Email
+  await sendEmail(
+    email,
+    `Booking Confirmation: ${booking.bookingReference}`,
+    generateBookingConfirmationHTML(booking)
+  );
+
+  // SMS
+  if (phone) {
+    await sendSMS(
+      phone,
+      `Hi ${booking.customer.name}, your booking ${booking.bookingReference} at ${booking.businessId?.name} on ${new Date(booking.date).toLocaleDateString()} at ${booking.startTime} is confirmed.`
+    );
+  }
+
+  // Real-time alert to business owner dashboard
+  try {
+    emitToBusiness(booking.businessId._id.toString(), 'booking:new', {
+      bookingReference: booking.bookingReference,
+      customerName: booking.customer.name,
+      serviceName: booking.serviceId?.name,
+      date: booking.date,
+      startTime: booking.startTime,
+      status: booking.status,
+    });
+  } catch (err) {
+    console.error('Socket emit error:', err.message);
   }
 };
 
 /**
- * Send a booking status update email
+ * On status change
  */
 export const sendBookingStatusUpdate = async (booking, oldStatus) => {
+  await booking.populate('serviceId', 'name price duration');
+  await booking.populate('businessId', 'name slug');
+
+  const email = booking.customer?.email;
+  const phone = booking.customer?.phone;
+
+  await sendEmail(
+    email,
+    `Booking ${booking.bookingReference} - Status Update`,
+    generateBookingStatusHTML(booking, oldStatus)
+  );
+
+  if (phone) {
+    await sendSMS(
+      phone,
+      `Your booking ${booking.bookingReference} status changed from ${oldStatus} to ${booking.status}.`
+    );
+  }
+
   try {
-    await booking.populate('serviceId', 'name price duration');
-    await booking.populate('businessId', 'name slug');
-
-    const customerEmail = booking.customer.email;
-    if (!customerEmail) return;
-
-    const html = generateBookingStatusHTML(booking, oldStatus);
-    const subject = `Booking ${booking.bookingReference} - Status Update`;
-
-    await transporter.sendMail({
-      from: process.env.EMAIL_FROM,
-      to: customerEmail,
-      subject,
-      html,
+    emitToBusiness(booking.businessId._id.toString(), 'booking:status', {
+      bookingReference: booking.bookingReference,
+      status: booking.status,
+      oldStatus,
     });
-
-    console.log(`✅ Status update email sent to ${customerEmail} for booking ${booking.bookingReference}`);
-  } catch (error) {
-    console.error('Error sending status update email:', error);
+  } catch (err) {
+    console.error('Socket emit error:', err.message);
   }
 };
