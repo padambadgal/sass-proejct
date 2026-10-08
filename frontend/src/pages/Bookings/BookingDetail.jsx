@@ -33,7 +33,6 @@ const BookingDetail = () => {
     confirmed: 'bg-blue-100 text-blue-800',
     completed: 'bg-green-100 text-green-800',
     cancelled: 'bg-red-100 text-red-800',
-    no_show: 'bg-gray-100 text-gray-800',
   };
 
   const paymentColors = {
@@ -47,7 +46,7 @@ const BookingDetail = () => {
     <div>
       <button
         onClick={() => navigate('/bookings')}
-        className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900"
+        className="mb-4 flex items-center cursor-pointer gap-2 text-gray-600 hover:text-gray-900"
       >
         <ArrowLeft size={18} /> Back to Bookings
       </button>

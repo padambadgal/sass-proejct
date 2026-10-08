@@ -16,12 +16,6 @@ const Landing = () => {
           <div className="flex items-center gap-3">
             {isAuthenticated ? (
               <>
-                <Link
-                  to="/book"
-                  className="text-sm font-medium text-gray-700 hover:text-indigo-600 transition"
-                >
-                  Book
-                </Link>
                 {hasActiveSubscription && (
                   <Link
                     to="/dashboard"
@@ -30,6 +24,13 @@ const Landing = () => {
                     Dashboard
                   </Link>
                 )}
+                <Link
+                  to="/book"
+                  className="text-sm font-medium text-gray-700 hover:text-indigo-600 transition"
+                >
+                  Book
+                </Link>
+                
                 <button
                   onClick={() => {
                     localStorage.removeItem('authToken');

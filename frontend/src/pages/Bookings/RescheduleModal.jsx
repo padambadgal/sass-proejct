@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import ReactDatePicker from 'react-datepicker';
-import "react-datepicker/dist/react-datepicker.css";
+import 'react-datepicker/dist/react-datepicker.css';
 import apiClient from '../../api/client';
 import { X, Calendar, Clock, Loader2, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -12,17 +12,38 @@ const RescheduleModal = ({ booking, isOpen, onClose, onSuccess }) => {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Fetch slots when date changes
+  // Reset when modal opens with a new booking
+  useEffect(() => {
+    if (booking && isOpen) {
+      const bookingDate = booking.date ? new Date(booking.date) : new Date();
+      setDate(bookingDate);
+      setSelectedSlot('');
+    }
+  }, [booking, isOpen]);
+
+  // Fetch slots when date or booking changes
   useEffect(() => {
     if (!booking || !isOpen) return;
+
     const fetchSlots = async () => {
       setLoadingSlots(true);
       setSelectedSlot('');
       setSlots([]);
       try {
         const dateStr = date.toISOString().split('T')[0];
+        // Extract IDs safely — booking.businessId / booking.serviceId may be
+        // populated objects or plain strings
+        const businessId =
+          typeof booking.businessId === 'object'
+            ? booking.businessId._id
+            : booking.businessId;
+        const serviceId =
+          typeof booking.serviceId === 'object'
+            ? booking.serviceId._id
+            : booking.serviceId;
+
         const res = await apiClient.get(
-          `/slots/available-times?businessId=${booking.businessId._id}&serviceId=${booking.serviceId._id}&date=${dateStr}`
+          `/slots/available-times?businessId=${businessId}&serviceId=${serviceId}&date=${dateStr}`
         );
         setSlots(res.data.data.availableSlots || []);
       } catch (err) {
@@ -42,7 +63,8 @@ const RescheduleModal = ({ booking, isOpen, onClose, onSuccess }) => {
     }
     setSubmitting(true);
     try {
-      await apiClient.patch(`/public/bookings/${booking._id}/reschedule`, {
+      // ✅ Use owner-side endpoint (auth required)
+      await apiClient.patch(`/bookings/${booking._id}/reschedule`, {
         date: date.toISOString().split('T')[0],
         startTime: selectedSlot,
       });
@@ -58,20 +80,30 @@ const RescheduleModal = ({ booking, isOpen, onClose, onSuccess }) => {
 
   if (!isOpen || !booking) return null;
 
+  // Safe field extraction
+  const serviceName =
+    typeof booking.serviceId === 'object'
+      ? booking.serviceId?.name
+      : 'Service';
+  const customerName =
+    typeof booking.customer === 'object' ? booking.customer?.name : '';
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-all duration-300">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 transform transition-all duration-300 scale-100 opacity-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in-95">
         {/* Header */}
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Reschedule Booking</h2>
+            <h2 className="text-2xl font-bold text-gray-900">
+              Reschedule Booking
+            </h2>
             <p className="text-sm text-gray-500 mt-0.5">
-              Change the date and time for your appointment
+              Change the date and time for {customerName || 'this booking'}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100"
+            className="text-gray-400 hover:text-gray-600 transition p-1 rounded-full hover:bg-gray-100"
           >
             <X size={24} />
           </button>
@@ -79,9 +111,16 @@ const RescheduleModal = ({ booking, isOpen, onClose, onSuccess }) => {
 
         {/* Booking reference */}
         <div className="bg-indigo-50 rounded-xl p-3 mb-5 text-sm flex items-center justify-between">
-          <span className="text-indigo-700 font-medium">Booking Reference</span>
-          <span className="font-mono text-indigo-900 bg-white px-3 py-1 rounded-lg border border-indigo-100">
-            {booking.bookingReference}
+          <div>
+            <div className="text-indigo-700 font-medium">
+              {booking.bookingReference}
+            </div>
+            {serviceName && (
+              <div className="text-xs text-indigo-600">{serviceName}</div>
+            )}
+          </div>
+          <span className="text-xs text-indigo-600 bg-white px-2 py-1 rounded-lg border border-indigo-100">
+            {booking.startTime} – {booking.endTime}
           </span>
         </div>
 
@@ -91,7 +130,7 @@ const RescheduleModal = ({ booking, isOpen, onClose, onSuccess }) => {
             New Date
           </label>
           <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5 z-10 pointer-events-none" />
             <ReactDatePicker
               selected={date}
               onChange={setDate}
@@ -111,18 +150,23 @@ const RescheduleModal = ({ booking, isOpen, onClose, onSuccess }) => {
           {loadingSlots ? (
             <div className="flex items-center justify-center py-6">
               <Loader2 className="animate-spin h-6 w-6 text-indigo-500" />
-              <span className="ml-2 text-sm text-gray-500">Loading slots...</span>
+              <span className="ml-2 text-sm text-gray-500">
+                Loading slots...
+              </span>
             </div>
           ) : slots.length === 0 ? (
             <div className="text-center py-6 bg-gray-50 rounded-xl border border-dashed border-gray-200">
               <Clock className="mx-auto h-8 w-8 text-gray-300" />
-              <p className="text-sm text-gray-500 mt-1">No slots available for this date</p>
+              <p className="text-sm text-gray-500 mt-1">
+                No slots available for this date
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1">
               {slots.map((slot) => (
                 <button
                   key={slot}
+                  type="button"
                   onClick={() => setSelectedSlot(slot)}
                   className={`p-2.5 text-sm rounded-xl border transition-all duration-150 ${
                     selectedSlot === slot
@@ -158,7 +202,7 @@ const RescheduleModal = ({ booking, isOpen, onClose, onSuccess }) => {
             ) : (
               <>
                 <Check size={18} />
-                Confirm Reschedule
+                Confirm
               </>
             )}
           </button>

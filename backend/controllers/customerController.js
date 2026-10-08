@@ -92,10 +92,21 @@ export const getCustomers = async (req, res, next) => {
 
     const customers = await Customer.find({ businessId, status: 'active' })
       .sort({ createdAt: -1 });
+    const bookingCounts = await Booking.aggregate([
+      { $match: { customerId: { $in: customers.map((customer) => customer._id) } } },
+      { $group: { _id: '$customerId', totalBookings: { $sum: 1 } } },
+    ]);
+    const totalBookingsByCustomerId = new Map(
+      bookingCounts.map(({ _id, totalBookings }) => [_id.toString(), totalBookings])
+    );
+    const customersWithBookingCounts = customers.map((customer) => ({
+      ...customer.toObject(),
+      totalBookings: totalBookingsByCustomerId.get(customer._id.toString()) || 0,
+    }));
 
     res.status(200).json({
       success: true,
-      data: customers,
+      data: customersWithBookingCounts,
     });
   } catch (error) {
     if (error.message === 'Business not found or you do not own it') {
@@ -120,21 +131,23 @@ export const getCustomerById = async (req, res, next) => {
 
     await validateBusinessOwnership(customer.businessId, req.user._id);
 
-    // Fetch booking history for this customer
-    const bookings = await Booking.find({
-      businessId: customer.businessId,
-      'customer.email': customer.email,
-      'customer.phone': customer.phone,
-    })
+    const bookingFilter = { customerId: customer._id };
+
+    // Fetch booking history and count from actual booking records, not the cached counter.
+    const bookings = await Booking.find(bookingFilter)
       .populate('serviceId', 'name price duration')
       .populate('businessId', 'name slug')
       .sort({ date: -1, startTime: -1 })
       .limit(50); // limit to recent 50
+    const totalBookings = await Booking.countDocuments(bookingFilter);
 
     res.status(200).json({
       success: true,
       data: {
-        customer,
+        customer: {
+          ...customer.toObject(),
+          totalBookings,
+        },
         bookings,
       },
     });

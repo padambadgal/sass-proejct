@@ -138,6 +138,14 @@ export const updateService = async (req, res, next) => {
       }
     });
 
+    if (service.status === 'inactive' && updates.status === 'active' &&
+        !(await canCreateService(service.businessId))) {
+      return res.status(403).json({
+        success: false,
+        message: 'Service limit reached for your current plan. Deactivate another service or upgrade your plan.',
+      });
+    }
+
     // Apply updates
     service = await Service.findByIdAndUpdate(req.params.id, updates, {
       returnDocument: 'after',

@@ -123,6 +123,47 @@ export const login = async (req, res) => {
     }
 };
 
+export const changePassword = async (req, res) => {
+    try {
+        const { email: rawEmail, newPassword } = req.body;
+        const email = typeof rawEmail === 'string' ? rawEmail.trim().toLowerCase() : '';
+        if (!email || typeof newPassword !== 'string') {
+            return res.status(400).json({
+                success: false,
+                message: 'Email, and new password are required',
+            });
+        }
+        if (newPassword.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must be at least 6 characters long',
+            });
+        }
+
+        const user = await User.findOne({ email }).select('+password');
+        if (!user || typeof user.password !== 'string' || !user.password.startsWith('$2')){
+            return res.status(401).json({
+                success: false,
+                message: 'Email is incorrect',
+            });
+        }
+
+        user.password = await bcrypt.hash(newPassword, 10);
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: 'Password changed successfully. You can now sign in with your new password.',
+        });
+    } catch (error) {
+        console.error('Change password error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Unable to change your password right now.',
+        });
+    }
+};
+
 export const logout = (req, res) => {
     res.clearCookie('token');
     res.status(200).json({

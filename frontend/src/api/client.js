@@ -3,9 +3,9 @@ import axios from 'axios';
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   headers: { 'Content-Type': 'application/json' },
+  withCredentials: true, // ✅ Send cookies (httpOnly token)
 });
 
-// Attach token to every request
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('authToken');
@@ -17,13 +17,16 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Handle 401 responses
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('authToken');
-      window.location.href = '/';
+      // Only redirect if not already on a public page
+      const publicPaths = ['/', '/login', '/register', '/pricing', '/book'];
+      if (!publicPaths.some((p) => window.location.pathname.startsWith(p))) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

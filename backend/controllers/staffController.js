@@ -166,6 +166,14 @@ export const updateStaff = async (req, res, next) => {
       updates.services = await validateServices(updates.services, staff.businessId);
     }
 
+    if (staff.status === 'inactive' && updates.status === 'active' &&
+        !(await canCreateStaff(staff.businessId))) {
+      return res.status(403).json({
+        success: false,
+        message: 'Staff limit reached for your current plan. Deactivate another staff member or upgrade your plan.',
+      });
+    }
+
     // Apply updates
     staff = await Staff.findByIdAndUpdate(req.params.id, updates, {
       returnDocument: 'after',

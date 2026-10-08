@@ -2,6 +2,7 @@ import Business from '../models/Business.js';
 import Service from '../models/Service.js';
 import Availability from '../models/Availability.js';
 import Booking from '../models/Booking.js';
+import Subscription from '../models/Subscription.js';
 import {generateAvailableSlots,getAvailableSlotTimes,filterPastSlots,} from '../services/slotService.js';
 import { createBooking } from '../services/bookingService.js';
 // Helper: Find business by slug and ensure it's active
@@ -10,6 +11,16 @@ const findBusinessBySlug = async (slug) => {
   if (!business) {
     throw new Error('Business not found');
   }
+
+  const activeSubscription = await Subscription.exists({
+    userId: business.ownerId,
+    status: 'active',
+    endDate: { $gt: new Date() },
+  });
+  if (!activeSubscription) {
+    throw new Error('Business not found');
+  }
+
   return business;
 };
 
@@ -291,7 +302,14 @@ export const createPublicBooking = async (req, res) => {
 // @access  Public
 export const getPublicBusinesses = async (req, res) => {
   try {
-    const businesses = await Business.find({ isActive: true })
+    const activeSubscriptions = await Subscription.distinct('userId', {
+      status: 'active',
+      endDate: { $gt: new Date() },
+    });
+    const businesses = await Business.find({
+      isActive: true,
+      ownerId: { $in: activeSubscriptions },
+    })
       .select('name slug description logo phone email address')
       .sort({ name: 1 });
     res.status(200).json({

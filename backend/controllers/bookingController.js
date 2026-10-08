@@ -8,10 +8,9 @@ import { sendBookingStatusUpdate } from '../services/notificationService.js';
 // Allowed status transitions
 const allowedTransitions = {
   pending: ['confirmed', 'cancelled'],
-  confirmed: ['completed', 'cancelled', 'no_show'],
+  confirmed: ['completed', 'cancelled'],
   completed: [],
   cancelled: [],
-  no_show: [],
 };
 
 // Helper: Check business ownership
@@ -218,7 +217,7 @@ export const getBookingById = async (req, res) => {
   }
 };
 
-// @desc    Update booking status (confirm, complete, cancel, no-show)
+// @desc    Update booking status (confirm, complete, cancel)
 // @route   PATCH /api/bookings/:id/status
 // @access  Private
 
@@ -226,7 +225,7 @@ export const getBookingById = async (req, res) => {
 export const updateBookingStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    const allowedStatuses = ['pending', 'confirmed', 'completed', 'cancelled', 'no_show'];
+    const allowedStatuses = ['pending', 'confirmed', 'completed', 'cancelled'];
     if (!status || !allowedStatuses.includes(status)) {
       return res.status(400).json({ success: false, message: 'Invalid status' });
     }
@@ -249,6 +248,9 @@ export const updateBookingStatus = async (req, res) => {
     }
 
     booking.status = status;
+    if (status === 'completed') {
+      booking.paymentStatus = 'paid';
+    }
     await booking.save();
     sendBookingStatusUpdate(booking, current).catch(err =>
       console.error('Email error:', err)

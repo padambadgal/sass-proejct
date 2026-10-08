@@ -79,7 +79,7 @@ export const canCreateAppointment = async (businessId, date) => {
 
   // Count bookings for this business on the given date
   // We consider only 'pending' and 'confirmed' as consuming the daily limit
-  // (cancelled/no_show will free the slot, but we count only confirmed/pending for limit)
+  // Cancelled bookings free the slot; only confirmed/pending bookings consume the limit.
   const startOfDay = new Date(date);
   startOfDay.setHours(0, 0, 0, 0);
   const endOfDay = new Date(date);

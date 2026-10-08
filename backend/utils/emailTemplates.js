@@ -55,7 +55,6 @@ export const generateBookingStatusHTML = (booking, oldStatus) => {
   if (status === 'confirmed') statusMessage = 'has been confirmed by the business.';
   else if (status === 'cancelled') statusMessage = 'has been cancelled.';
   else if (status === 'completed') statusMessage = 'has been marked as completed.';
-  else if (status === 'no_show') statusMessage = 'was marked as a no-show.';
   else statusMessage = `has been updated to ${status}.`;
 
   return `

@@ -1,17 +1,17 @@
 import Business from '../models/Business.js';
-import { canCreateBusiness, getPlanLimitsForUser } from '../utils/planLimits.js';
+import { canCreateBusiness } from '../utils/planLimits.js';
 import Availability from '../models/Availability.js';
 
 // Helper to generate unique slug (in case of duplicates)
-const generateUniqueSlug = async (baseSlug) => {
-  let slug = baseSlug;
-  let counter = 1;
-  while (await Business.findOne({ slug })) {
-    slug = `${baseSlug}-${counter}`;
-    counter++;
-  }
-  return slug;
-};
+// const generateUniqueSlug = async (baseSlug) => {
+//   let slug = baseSlug;
+//   let counter = 1;
+//   while (await Business.findOne({ slug })) {
+//     slug = `${baseSlug}-${counter}`;
+//     counter++;
+//   }
+//   return slug;
+// };
 
 // @desc    Create a new business
 // @route   POST /api/business
@@ -37,6 +37,13 @@ export const createBusiness = async (req, res) => {
       });
     }
 
+    if (!(await canCreateBusiness(req.user._id))) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your plan has reached its active business limit. Deactivate another business or upgrade your plan.',
+      });
+    }
+
     // 3. Create the business
     const business = new Business({
       name,
@@ -48,6 +55,7 @@ export const createBusiness = async (req, res) => {
       ownerId: req.user._id,
       isActive: true,
     });
+    
     await business.save();
 
     // 4. Create default availability for 7 days
@@ -174,6 +182,13 @@ export const updateBusiness = async (req, res, next) => {
       }
     });
 
+    if (!business.isActive && updates.isActive === true && !(await canCreateBusiness(req.user._id))) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your plan has reached its active business limit. Deactivate another business or upgrade your plan.',
+      });
+    }
+
     // If name is updated, regenerate slug? We'll keep slug as is. Or we can optionally regenerate.
     // But to keep consistent, we won't auto‑update slug on name change.
     // If user wants to change slug, we could add a separate endpoint, but we skip for now.
@@ -232,5 +247,3 @@ export const deleteBusiness = async (req, res, next) => {
     next(error);
   }
 };
-
-

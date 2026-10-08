@@ -9,7 +9,6 @@ export const AuthProvider = ({ children }) => {
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Load user and subscription on mount
   useEffect(() => {
     const loadUserAndSubscription = async () => {
       const token = localStorage.getItem('authToken');
@@ -21,7 +20,7 @@ export const AuthProvider = ({ children }) => {
         const userRes = await apiClient.get('/auth/me');
         setUser(userRes.data.data);
         await refreshSubscription();
-      } catch (err) {
+      } catch {
         localStorage.removeItem('authToken');
         setUser(null);
         setSubscription(null);
@@ -32,7 +31,6 @@ export const AuthProvider = ({ children }) => {
     loadUserAndSubscription();
   }, []);
 
-  // Refresh subscription data
   const refreshSubscription = async () => {
     try {
       const res = await apiClient.get('/subscriptions/me');
@@ -42,23 +40,28 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Register
-  const register = async (name, email, password) => {
+  const register = async (name, email, password, phone = '', role = 'owner') => {
     try {
-      const res = await apiClient.post('/auth/register', { name, email, password });
+      const res = await apiClient.post('/auth/register', {
+        name,
+        email,
+        password,
+        phone,
+        role,
+      });
       const { data, token } = res.data;
       if (token) localStorage.setItem('authToken', token);
       setUser(data);
       await refreshSubscription();
       toast.success('Registration successful!');
-      return { success: true };
+      // console.log('Registration successful:', data);
+      return { success: true, user: data };
     } catch (err) {
       toast.error(err.response?.data?.message || 'Registration failed');
       return { success: false };
     }
   };
 
-  // Login
   const login = async (email, password) => {
     try {
       const res = await apiClient.post('/auth/login', { email, password });
@@ -67,24 +70,21 @@ export const AuthProvider = ({ children }) => {
       setUser(data);
       await refreshSubscription();
       toast.success('Welcome back!');
-      return { success: true };
+      return { success: true, user: data };
     } catch (err) {
       toast.error(err.response?.data?.message || 'Login failed');
       return { success: false };
     }
   };
 
-  // Logout
   const logout = async () => {
     try {
       await apiClient.post('/auth/logout');
-      localStorage.removeItem('authToken');
-      setUser(null);
-      setSubscription(null);
-      toast.success('Logged out');
-    } catch (err) {
-      toast.error('Logout failed');
-    }
+    } catch {}
+    localStorage.removeItem('authToken');
+    setUser(null);
+    setSubscription(null);
+    toast.success('Logged out');
   };
 
   const value = {
@@ -96,7 +96,10 @@ export const AuthProvider = ({ children }) => {
     logout,
     refreshSubscription,
     isAuthenticated: !!user,
-    hasActiveSubscription: subscription && subscription.status === 'active',
+    hasActiveSubscription: subscription?.status === 'active',
+    isOwner: user?.role === 'owner',
+    isStaff: user?.role === 'staff',
+    isCustomer: user?.role === 'customer',
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -30,11 +30,23 @@ if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
 }
 
 // ---------- Helpers ----------
+const normalizePhoneNumber = (phoneNumber) => String(phoneNumber || '').replace(/\D/g, '');
+
 const sendSMS = async (to, body) => {
-  if (!twilioClient || !process.env.TWILIO_PHONE_NUMBER) return;
+  const from = process.env.TWILIO_PHONE_NUMBER;
+  if (!twilioClient || !from) return;
+  if (!to) {
+    console.warn('SMS skipped: customer phone number is missing.');
+    return;
+  }
+  if (normalizePhoneNumber(to) === normalizePhoneNumber(from)) {
+    console.warn('SMS skipped: customer phone matches the configured Twilio sender number. Configure a different sender number or correct the customer phone.');
+    return;
+  }
+
   try {
     await twilioClient.messages.create({
-      from: process.env.TWILIO_PHONE_NUMBER,
+      from,
       to,
       body,
     });

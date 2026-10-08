@@ -75,7 +75,6 @@ const bookingSchema = new mongoose.Schema(
         'confirmed',
         'completed',
         'cancelled',
-        'no_show',
       ],
       default: 'pending',
     },

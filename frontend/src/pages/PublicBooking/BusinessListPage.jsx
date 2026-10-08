@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 const BusinessListPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated , hasActiveSubscription } = useAuth();
   const [businesses, setBusinesses] = useState([]);
   const [filteredBusinesses, setFilteredBusinesses] = useState([]);
   const [selectedBusiness, setSelectedBusiness] = useState(null);
@@ -81,6 +81,16 @@ const BusinessListPage = () => {
             Appoint<span className="text-gray-900">SaaS</span>
           </Link>
           <div className="flex items-center gap-3">
+            {
+              isAuthenticated && hasActiveSubscription && (
+                <Link
+                  to="/dashboard"
+                  className="text-sm font-medium bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
+                >
+                  Dashboard
+                </Link>
+              )
+            }
             {isAuthenticated ? (
               <>
                 <Link

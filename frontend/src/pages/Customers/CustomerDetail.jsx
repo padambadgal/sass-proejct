@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import apiClient from '../../api/client';
-import { ArrowLeft, Calendar, Clock, DollarSign, User, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, DollarSign, User, RefreshCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import RescheduleModal from '../Bookings/RescheduleModal';
 
@@ -19,6 +19,7 @@ const CustomerDetail = () => {
       try {
         const res = await apiClient.get(`/customers/${id}`);
         setCustomer(res.data.data.customer);
+        // console.log('Fetched customer details:', res.data.data.customer);
         setBookings(res.data.data.bookings || []);
       } catch (err) {
         toast.error('Failed to load customer details');
@@ -44,7 +45,6 @@ const CustomerDetail = () => {
     confirmed: 'bg-blue-100 text-blue-800',
     completed: 'bg-green-100 text-green-800',
     cancelled: 'bg-red-100 text-red-800',
-    no_show: 'bg-gray-100 text-gray-800',
   };
 
   const canReschedule = (status) => ['pending', 'confirmed'].includes(status);
@@ -53,7 +53,7 @@ const CustomerDetail = () => {
     <div>
       <button
         onClick={() => navigate('/customers')}
-        className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
+        className="mb-4 flex items-center cursor-pointer gap-2 text-gray-600 hover:text-gray-900 transition"
       >
         <ArrowLeft size={18} /> Back to Customers
       </button>
@@ -107,7 +107,6 @@ const CustomerDetail = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -127,17 +126,6 @@ const CustomerDetail = () => {
                       <span className={`capitalize ${b.paymentStatus === 'paid' ? 'text-green-600' : 'text-gray-500'}`}>
                         {b.paymentStatus || 'unpaid'}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      {canReschedule(b.status) && (
-                        <button
-                          onClick={() => setRescheduleBooking(b)}
-                          className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1"
-                          title="Reschedule"
-                        >
-                          <RefreshCw size={16} /> Reschedule
-                        </button>
-                      )}
                     </td>
                   </tr>
                 ))}

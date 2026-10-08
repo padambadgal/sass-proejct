@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import apiClient from '../../api/client';
-import { Calendar, RefreshCw, Loader2, Clock, MapPin, User } from 'lucide-react';
+import { Calendar, RefreshCcw, Loader2, Clock, MapPin, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const MyBookings = () => {
@@ -36,7 +36,6 @@ const MyBookings = () => {
     confirmed: 'bg-blue-100 text-blue-800',
     completed: 'bg-green-100 text-green-800',
     cancelled: 'bg-red-100 text-red-800',
-    no_show: 'bg-gray-100 text-gray-800',
   };
 
   if (loading) {
@@ -105,7 +104,7 @@ const MyBookings = () => {
                               onClick={() => handleReschedule(b)}
                               className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1"
                             >
-                              <RefreshCw size={16} /> Reschedule
+                              <RefreshCcw size={16} /> Reschedule
                             </button>
                           )}
                         </td>
@@ -146,7 +145,7 @@ const MyBookings = () => {
                         onClick={() => handleReschedule(b)}
                         className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
                       >
-                        <RefreshCw size={16} /> Reschedule
+                        <RefreshCcw size={16} /> Reschedule
                       </button>
                     )}
                   </div>

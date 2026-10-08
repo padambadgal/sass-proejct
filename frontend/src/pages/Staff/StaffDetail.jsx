@@ -32,7 +32,7 @@ const StaffDetail = () => {
     <div>
       <button
         onClick={() => navigate('/staff')}
-        className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900"
+        className="mb-4 flex items-center cursor-pointer gap-2 text-gray-600 hover:text-gray-900"
       >
         <ArrowLeft size={18} /> Back to Staff
       </button>

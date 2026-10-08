@@ -1,11 +1,36 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import apiClient from '../../api/client';
-import { Eye, CheckCircle, XCircle, Clock, AlertCircle, RefreshCw, Calendar as CalIcon } from 'lucide-react';
+import {
+  Eye,
+  CheckCircle,
+  RefreshCw,
+  XCircle,
+  Calendar as CalIcon,
+  Store,
+  Plus,
+  ArrowRight,
+  CheckCircle2,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import ReactDatePicker from 'react-datepicker';
-import "react-datepicker/dist/react-datepicker.css";
+import 'react-datepicker/dist/react-datepicker.css';
 import RescheduleModal from './RescheduleModal';
+
+const STEPS = [
+  {
+    title: 'Create your business',
+    text: 'Add name, phone and a booking slug.',
+  },
+  {
+    title: 'Share your booking link',
+    text: 'Customers book from your public page.',
+  },
+  {
+    title: 'Manage bookings here',
+    text: 'Confirm, complete, cancel or reschedule.',
+  },
+];
 
 const BookingList = () => {
   const [businesses, setBusinesses] = useState([]);
@@ -13,33 +38,53 @@ const BookingList = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingBusinesses, setLoadingBusinesses] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState(new Date());
   const [rescheduleBooking, setRescheduleBooking] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Fetch businesses
-  useEffect(() => {
-    const fetchBusinesses = async () => {
-      setLoadingBusinesses(true);
-      try {
-        const res = await apiClient.get('/business/me');
-        setBusinesses(res.data.data);
-        if (res.data.data.length > 0) {
-          setSelectedBusinessId(res.data.data[0]._id);
-        }
-      } catch (err) {
-        toast.error('Failed to load businesses');
-      } finally {
-        setLoadingBusinesses(false);
+  /* ---------------- Businesses ---------------- */
+  const fetchBusinesses = useCallback(async ({ silent = false } = {}) => {
+    if (silent) setRefreshing(true);
+    else setLoadingBusinesses(true);
+
+    try {
+      const res = await apiClient.get('/business/me');
+      const list = res.data.data || [];
+      setBusinesses(list);
+      // keep current selection if it still exists, otherwise pick the first one
+      setSelectedBusinessId((prev) =>
+        list.some((b) => b._id === prev) ? prev : list[0]?._id || ''
+      );
+
+      if (silent) {
+        if (list.length === 0) toast.error('Still no business found. Please create one.');
+        else toast.success('Business found — you can manage bookings now!');
       }
-    };
-    fetchBusinesses();
+      return list;
+    } catch (err) {
+      toast.error('Failed to load businesses');
+      return [];
+    } finally {
+      setLoadingBusinesses(false);
+      setRefreshing(false);
+    }
   }, []);
 
-  // Fetch bookings – depends on refreshKey
   useEffect(() => {
-    if (!selectedBusinessId) return;
+    fetchBusinesses();
+  }, [fetchBusinesses]);
+
+  /* ---------------- Bookings ---------------- */
+  useEffect(() => {
+    if (!selectedBusinessId) {
+      setBookings([]);
+      return;
+    }
+
+    let cancelled = false;
+
     const fetchBookings = async () => {
       setLoading(true);
       try {
@@ -48,35 +93,44 @@ const BookingList = () => {
         if (statusFilter !== 'all') url += `&status=${statusFilter}`;
         url += `&date=${dateStr}`;
         const res = await apiClient.get(url);
+        if (cancelled) return;
         setBookings(res.data.data || []);
       } catch (err) {
+        if (cancelled) return;
         toast.error('Failed to load bookings');
         setBookings([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
+
     fetchBookings();
+    return () => {
+      cancelled = true;
+    };
   }, [selectedBusinessId, statusFilter, dateFilter, refreshKey]);
 
+  /* ---------------- Actions ---------------- */
   const handleStatusChange = async (bookingId, newStatus) => {
     if (!window.confirm(`Change status to ${newStatus}?`)) return;
     try {
-      await apiClient.patch(`/bookings/${bookingId}/status`, { status: newStatus });
+      const response = await apiClient.patch(`/bookings/${bookingId}/status`, {
+        status: newStatus,
+      });
       toast.success(`Booking ${newStatus}`);
-      setBookings(prev => prev.map(b => b._id === bookingId ? { ...b, status: newStatus } : b));
+      setBookings((prev) =>
+        prev.map((b) =>
+          b._id === bookingId ? { ...b, ...response.data.data } : b
+        )
+      );
     } catch (err) {
       toast.error(err.response?.data?.message || 'Status update failed');
     }
   };
 
-  const handleBusinessChange = (e) => {
-    setSelectedBusinessId(e.target.value);
-  };
-
   const handleRescheduleSuccess = () => {
     setRescheduleBooking(null);
-    setRefreshKey(prev => prev + 1);
+    setRefreshKey((prev) => prev + 1);
     toast.success('Booking rescheduled successfully');
   };
 
@@ -85,55 +139,124 @@ const BookingList = () => {
     confirmed: 'bg-blue-100 text-blue-800',
     completed: 'bg-green-100 text-green-800',
     cancelled: 'bg-red-100 text-red-800',
-    no_show: 'bg-gray-100 text-gray-800',
   };
 
   const statusActions = {
     pending: ['confirmed', 'cancelled'],
-    confirmed: ['completed', 'cancelled', 'no_show'],
+    confirmed: ['completed', 'cancelled'],
     completed: [],
     cancelled: [],
-    no_show: [],
   };
 
-  // Loading spinner for businesses
+  /* ---------------- Loaders ---------------- */
   if (loadingBusinesses) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-indigo-600" />
       </div>
     );
   }
 
-  // No business found
+  /* ---------------- Empty state: no business yet ---------------- */
   if (businesses.length === 0) {
     return (
-      <div className="text-center py-12">
-        <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
-        <h3 className="mt-2 text-sm font-medium text-gray-900">No business found</h3>
-        <p className="mt-1 text-sm text-gray-500">Create a business first to manage bookings.</p>
-        <Link to="/business/new" className="mt-4 inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md">
-          Add Business
-        </Link>
+      <div className="mx-auto max-w-3xl py-6">
+        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+          {/* Header */}
+          <div className="border-b border-gray-100 bg-gradient-to-b from-indigo-50/80 to-white px-6 py-10 text-center sm:px-10">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-indigo-100 ring-8 ring-indigo-50">
+              <Store className="h-8 w-8 text-indigo-600" aria-hidden="true" />
+            </div>
+            <h2 className="mt-5 text-2xl font-bold text-gray-900">
+              Create a business first
+            </h2>
+            <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-gray-600">
+              Bookings belong to a business — that's where your services, working
+              hours and public booking page live. Set up your business once and this
+              page will unlock automatically.
+            </p>
+          </div>
+
+          {/* Steps */}
+          <ol className="grid gap-4 px-6 py-6 sm:grid-cols-3 sm:px-10">
+            {STEPS.map((step, i) => (
+              <li
+                key={step.title}
+                className="rounded-xl border border-gray-100 bg-gray-50/70 p-4 transition hover:border-indigo-200 hover:bg-indigo-50/50"
+              >
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">
+                  {i + 1}
+                </span>
+                <p className="mt-3 text-sm font-semibold text-gray-900">
+                  {step.title}
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-gray-600">
+                  {step.text}
+                </p>
+              </li>
+            ))}
+          </ol>
+
+          {/* Actions */}
+          <div className="flex flex-col-reverse gap-3 border-t border-gray-100 bg-gray-50 px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-10">
+            <button
+              type="button"
+              onClick={() => fetchBusinesses({ silent: true })}
+              disabled={refreshing}
+              className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 transition hover:text-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:opacity-60"
+            >
+              <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+              {refreshing ? 'Checking…' : "I've already created one — Refresh"}
+            </button>
+
+            <Link
+              to="/business/new"
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+            >
+              <Plus size={18} />
+              Create Business
+              <ArrowRight size={16} />
+            </Link>
+          </div>
+        </div>
+
+        <p className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-500">
+          <CheckCircle2 size={14} className="text-green-500" />
+          You'll be redirected back here once your business is created.
+        </p>
       </div>
     );
   }
 
+  /* ---------------- Main view ---------------- */
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-bold">Bookings</h1>
-        <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setRefreshKey((prev) => prev + 1)}
+            disabled={loading || !selectedBusinessId}
+            className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            Refresh
+          </button>
           <div>
-            <label htmlFor="business" className="sr-only">Select business</label>
+            <label htmlFor="business" className="sr-only">
+              Select business
+            </label>
             <select
               id="business"
               value={selectedBusinessId}
-              onChange={handleBusinessChange}
+              onChange={(e) => setSelectedBusinessId(e.target.value)}
               className="block w-48 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             >
-              {businesses.map(b => (
-                <option key={b._id} value={b._id}>{b.name}</option>
+              {businesses.map((b) => (
+                <option key={b._id} value={b._id}>
+                  {b.name}
+                </option>
               ))}
             </select>
           </div>
@@ -148,7 +271,6 @@ const BookingList = () => {
               <option value="confirmed">Confirmed</option>
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
-              <option value="no_show">No‑Show</option>
             </select>
           </div>
           <div>
@@ -164,69 +286,110 @@ const BookingList = () => {
 
       {/* Loading spinner for bookings */}
       {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <div className="flex h-64 items-center justify-center">
+          <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-indigo-600" />
         </div>
       ) : bookings.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg shadow">
+        <div className="rounded-lg bg-white py-12 text-center shadow">
           <CalIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <p className="mt-2 text-gray-500">No bookings for this date and status.</p>
+          <p className="mt-2 text-gray-500">
+            No bookings for this date and status.
+          </p>
         </div>
       ) : (
-        <div className="bg-white shadow overflow-x-auto rounded-lg">
+        <div className="overflow-x-auto rounded-lg bg-white shadow">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                {[
+                  'Reference',
+                  'Customer',
+                  'Service',
+                  'Date',
+                  'Time',
+                  'Status',
+                  'Actions',
+                ].map((h) => (
+                  <th
+                    key={h}
+                    className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200 bg-white">
               {bookings.map((b) => (
-                <tr key={b._id}>
-                  <td className="px-4 py-3 text-sm font-mono text-gray-900">{b.bookingReference}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900">{b.customer?.name || '—'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500">{b.serviceId?.name || '—'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500">{new Date(b.date).toLocaleDateString('en-IN')}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500">{b.startTime} – {b.endTime}</td>
+                <tr key={b._id} className="transition hover:bg-gray-50">
+                  <td className="px-4 py-3 font-mono text-sm text-gray-900">
+                    {b.bookingReference}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    {b.customer?.name || '—'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500">
+                    {b.serviceId?.name || '—'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500">
+                    {new Date(b.date).toLocaleDateString('en-IN')}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500">
+                    {b.startTime} – {b.endTime}
+                  </td>
                   <td className="px-4 py-3 text-sm">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[b.status] || 'bg-gray-100 text-gray-800'}`}>
+                    <span
+                      className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
+                        statusColors[b.status] || 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
                       {b.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm font-medium space-x-2 whitespace-nowrap">
-                    <Link to={`/bookings/${b._id}`} className="text-blue-600 hover:text-blue-900" title="View">
+                  <td className="space-x-2 whitespace-nowrap px-4 py-3 text-sm font-medium">
+                    <Link
+                      to={`/bookings/${b._id}`}
+                      className="text-blue-600 transition hover:text-blue-900"
+                      title="View"
+                    >
                       <Eye size={18} className="inline" />
                     </Link>
+
                     {statusActions[b.status]?.includes('confirmed') && (
-                      <button onClick={() => handleStatusChange(b._id, 'confirmed')} className="text-blue-600 hover:text-blue-900" title="Confirm">
+                      <button
+                        type="button"
+                        onClick={() => handleStatusChange(b._id, 'confirmed')}
+                        className="text-blue-600 transition hover:text-blue-900"
+                        title="Confirm"
+                      >
                         <CheckCircle size={18} className="inline" />
                       </button>
                     )}
                     {statusActions[b.status]?.includes('completed') && (
-                      <button onClick={() => handleStatusChange(b._id, 'completed')} className="text-green-600 hover:text-green-900" title="Complete">
+                      <button
+                        type="button"
+                        onClick={() => handleStatusChange(b._id, 'completed')}
+                        className="text-green-600 transition hover:text-green-900"
+                        title="Complete"
+                      >
                         <CheckCircle size={18} className="inline" />
                       </button>
                     )}
                     {statusActions[b.status]?.includes('cancelled') && (
-                      <button onClick={() => handleStatusChange(b._id, 'cancelled')} className="text-red-600 hover:text-red-900" title="Cancel">
+                      <button
+                        type="button"
+                        onClick={() => handleStatusChange(b._id, 'cancelled')}
+                        className="text-red-600 transition hover:text-red-900"
+                        title="Cancel"
+                      >
                         <XCircle size={18} className="inline" />
-                      </button>
-                    )}
-                    {statusActions[b.status]?.includes('no_show') && (
-                      <button onClick={() => handleStatusChange(b._id, 'no_show')} className="text-gray-600 hover:text-gray-900" title="Mark No-Show">
-                        <Clock size={18} className="inline" />
                       </button>
                     )}
                     {['pending', 'confirmed'].includes(b.status) && (
                       <button
+                        type="button"
                         onClick={() => setRescheduleBooking(b)}
-                        className="text-indigo-600 hover:text-indigo-900"
+                        className="text-indigo-600 transition hover:text-indigo-900"
                         title="Reschedule"
                       >
                         <RefreshCw size={18} className="inline" />
