@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut } from 'lucide-react';
+import { LogOut, Menu } from 'lucide-react';
 
-const Navbar = ({ sidebarCollapsed }) => {
+const Navbar = ({ sidebarCollapsed, mobileSidebarOpen, onMenuClick }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -18,10 +18,20 @@ const Navbar = ({ sidebarCollapsed }) => {
       }`}
     >
       <div className="flex flex-wrap justify-between items-center">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onMenuClick}
+            className="inline-flex items-center justify-center rounded-lg p-2 text-gray-600 transition hover:bg-gray-100 hover:text-indigo-600 md:hidden"
+            aria-label={mobileSidebarOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={mobileSidebarOpen}
+            aria-controls="app-sidebar"
+          >
+            <Menu size={22} />
+          </button>
           <span className="text-xl font-semibold">Dashboard</span>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="hidden items-center gap-4 md:flex">
           <span className="text-sm text-gray-700">{user?.name}</span>
           <button
             onClick={handleLogout}

@@ -243,9 +243,9 @@ const StaffList = () => {
   /* ---------------- Main view ---------------- */
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">Staff</h1>
-        <div className="flex items-center gap-4">
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-4">
           <div>
             <label htmlFor="business" className="sr-only">
               Select business
@@ -254,7 +254,7 @@ const StaffList = () => {
               id="business"
               value={selectedBusinessId}
               onChange={(e) => setSelectedBusinessId(e.target.value)}
-              className="block w-48 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:w-48"
             >
               {businesses.map((b) => (
                 <option key={b._id} value={b._id}>
@@ -269,7 +269,7 @@ const StaffList = () => {
               type="button"
               disabled
               title="Staff limit reached — upgrade your plan"
-              className="inline-flex cursor-not-allowed items-center rounded-md bg-gray-400 px-4 py-2 text-white"
+              className="inline-flex self-start cursor-not-allowed items-center justify-center rounded-md bg-gray-400 px-4 py-2 text-white sm:self-auto"
             >
               <Plus size={18} className="mr-2" /> Add Staff
             </button>
@@ -277,7 +277,7 @@ const StaffList = () => {
             <Link
               to="/staff/new"
               state={{ businessId: selectedBusinessId }}
-              className="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-white transition hover:bg-indigo-700"
+              className="inline-flex self-start items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-white transition hover:bg-indigo-700 sm:self-auto"
             >
               <Plus size={18} className="mr-2" /> Add Staff
             </Link>

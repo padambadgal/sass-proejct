@@ -3,7 +3,7 @@ import Business from '../models/Business.js';
 import Service from '../models/Service.js';           // Needed for reschedule
 import { createBooking as createBookingService } from '../services/bookingService.js';
 // import { canCreateAppointment } from '../utils/planLimits.js';
-import { getAvailableSlotTimes } from '../services/slotService.js';
+import { filterPastSlots, getAvailableSlotTimes, isDateInPast } from '../services/slotService.js';
 import { sendBookingStatusUpdate } from '../services/notificationService.js';
 // Allowed status transitions
 const allowedTransitions = {
@@ -224,9 +224,19 @@ export const getBookingById = async (req, res) => {
 
 export const updateBookingStatus = async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, paymentStatus } = req.body;
     const allowedStatuses = ['pending', 'confirmed', 'completed', 'cancelled'];
-    if (!status || !allowedStatuses.includes(status)) {
+    const allowedPaymentStatuses = ['paid', 'unpaid'];
+    if (status !== undefined && !allowedStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status' });
+    }
+    if (
+      paymentStatus !== undefined &&
+      !allowedPaymentStatuses.includes(paymentStatus)
+    ) {
+      return res.status(400).json({ success: false, message: 'Invalid payment status' });
+    }
+    if (status === undefined && paymentStatus === undefined) {
       return res.status(400).json({ success: false, message: 'Invalid status' });
     }
 
@@ -237,7 +247,23 @@ export const updateBookingStatus = async (req, res) => {
 
     await validateBusinessOwnership(booking.businessId, req.user._id);
 
-    // Check if transition is allowed
+    if (status === undefined) {
+      if (booking.status !== 'completed') {
+        return res.status(400).json({
+          success: false,
+          message: 'Payment status can only be changed for completed bookings',
+        });
+      }
+
+      booking.paymentStatus = paymentStatus;
+      await booking.save();
+      return res.status(200).json({
+        success: true,
+        message: `Payment status updated to ${paymentStatus}`,
+        data: booking,
+      });
+    }
+
     // Check if transition is allowed
     const current = booking.status;
     if (!allowedTransitions[current] || !allowedTransitions[current].includes(status)) {
@@ -249,7 +275,7 @@ export const updateBookingStatus = async (req, res) => {
 
     booking.status = status;
     if (status === 'completed') {
-      booking.paymentStatus = 'paid';
+      booking.paymentStatus = paymentStatus || 'paid';
     }
     await booking.save();
     sendBookingStatusUpdate(booking, current).catch(err =>
@@ -269,6 +295,31 @@ export const updateBookingStatus = async (req, res) => {
     }
 
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const markBookingUnpaid = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    await validateBusinessOwnership(booking.businessId, req.user._id);
+    booking.paymentStatus = 'unpaid';
+    await booking.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Payment marked as unpaid',
+      data: booking,
+    });
+  } catch (error) {
+    console.error('Mark booking unpaid error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update payment status',
+    });
   }
 };
 
@@ -327,7 +378,7 @@ export const rescheduleBooking = async (req, res) => {
     }
 
     // Ownership check
-    await validateBusinessOwnership(booking.businessId, req.user._id);
+    const business = await validateBusinessOwnership(booking.businessId, req.user._id);
 
     // Only pending or confirmed can be rescheduled
     if (!['pending', 'confirmed'].includes(booking.status)) {
@@ -338,12 +389,10 @@ export const rescheduleBooking = async (req, res) => {
     }
 
     // Validate new date is not in the past
-    const newDate = new Date(date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (newDate < today) {
+    if (isDateInPast(date, business.timezone)) {
       return res.status(400).json({ success: false, message: 'Cannot reschedule to a past date' });
     }
+    const newDate = new Date(`${date}T00:00:00Z`);
 
     // Check availability for the new slot (using service duration from the booking's service)
     const service = await Service.findById(booking.serviceId);
@@ -351,7 +400,11 @@ export const rescheduleBooking = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Service not found' });
     }
 
-    const availableSlots = await getAvailableSlotTimes(booking.businessId, booking.serviceId, date);
+    const availableSlots = filterPastSlots(
+      await getAvailableSlotTimes(booking.businessId, booking.serviceId, date),
+      date,
+      business.timezone
+    );
     if (!availableSlots.includes(startTime)) {
       return res.status(400).json({ success: false, message: 'New time slot is not available' });
     }

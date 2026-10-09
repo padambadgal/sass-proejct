@@ -4,6 +4,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import apiClient from '../../api/client';
 import { X, Calendar, Clock, Loader2, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatLocalDate } from '../../utils/date';
 
 const RescheduleModal = ({ booking, isOpen, onClose, onSuccess }) => {
   const [date, setDate] = useState(new Date());
@@ -30,7 +31,7 @@ const RescheduleModal = ({ booking, isOpen, onClose, onSuccess }) => {
       setSelectedSlot('');
       setSlots([]);
       try {
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = formatLocalDate(date);
         // Extract IDs safely — booking.businessId / booking.serviceId may be
         // populated objects or plain strings
         const businessId =
@@ -65,7 +66,7 @@ const RescheduleModal = ({ booking, isOpen, onClose, onSuccess }) => {
     try {
       // ✅ Use owner-side endpoint (auth required)
       await apiClient.patch(`/bookings/${booking._id}/reschedule`, {
-        date: date.toISOString().split('T')[0],
+        date: formatLocalDate(date),
         startTime: selectedSlot,
       });
       toast.success('Booking rescheduled successfully');

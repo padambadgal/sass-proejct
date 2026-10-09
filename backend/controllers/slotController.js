@@ -36,7 +36,7 @@ export const getAvailableSlotsController = async (req, res) => {
 
     // ✅ generateAvailableSlots returns a plain array now
     let slots = await generateAvailableSlots(businessId, serviceId, date);
-    slots = filterPastSlots(slots, date);
+    slots = filterPastSlots(slots, date, business.timezone);
 
     res.status(200).json({
       success: true,
@@ -73,8 +73,16 @@ export const getAvailableSlotTimesController = async (req, res) => {
       });
     }
 
+    const business = await Business.findOne({ _id: businessId, isActive: true });
+    if (!business) {
+      return res.status(404).json({
+        success: false,
+        message: 'Business not found or inactive',
+      });
+    }
+
     let slots = await getAvailableSlotTimes(businessId, serviceId, date);
-    slots = filterPastSlots(slots, date);
+    slots = filterPastSlots(slots, date, business.timezone);
 
     res.status(200).json({
       success: true,

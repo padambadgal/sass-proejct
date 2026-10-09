@@ -5,6 +5,7 @@ import ReactDatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { Calendar, Clock, User, Mail, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatLocalDate } from '../../utils/date';
 
 const CustomerReschedule = () => {
   const { reference } = useParams();
@@ -50,10 +51,10 @@ const CustomerReschedule = () => {
   useEffect(() => {
     if (!booking || !selectedDate) return;
     const fetchSlots = async () => {
-      const dateStr = selectedDate.toISOString().split('T')[0];
+      const dateStr = formatLocalDate(selectedDate);
       try {
         const res = await apiClient.get(
-          `/public/business/${booking.businessId.slug}/slots?serviceId=${booking.serviceId._id}&date=${dateStr}`
+          `/public/business/${booking.businessId.slug}/slots?serviceIds=${booking.serviceId._id}&date=${dateStr}`
         );
         setAvailableSlots(res.data.data.availableSlots || []);
         setSelectedSlot('');
@@ -73,7 +74,7 @@ const CustomerReschedule = () => {
     setSubmitting(true);
     try {
       await apiClient.patch(`/public/bookings/${reference}/reschedule`, {
-        date: selectedDate.toISOString().split('T')[0],
+        date: formatLocalDate(selectedDate),
         startTime: selectedSlot,
         email,
       });

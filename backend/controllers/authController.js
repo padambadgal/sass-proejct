@@ -125,12 +125,12 @@ export const login = async (req, res) => {
 
 export const changePassword = async (req, res) => {
     try {
-        const { email: rawEmail, newPassword } = req.body;
+        const { email: rawEmail, currentPassword, newPassword } = req.body;
         const email = typeof rawEmail === 'string' ? rawEmail.trim().toLowerCase() : '';
-        if (!email || typeof newPassword !== 'string') {
+        if (!email || typeof currentPassword !== 'string' || typeof newPassword !== 'string') {
             return res.status(400).json({
                 success: false,
-                message: 'Email, and new password are required',
+                message: 'Email, current password, and new password are required',
             });
         }
         if (newPassword.length < 6) {
@@ -141,10 +141,11 @@ export const changePassword = async (req, res) => {
         }
 
         const user = await User.findOne({ email }).select('+password');
-        if (!user || typeof user.password !== 'string' || !user.password.startsWith('$2')){
+        if (!user || typeof user.password !== 'string' || !user.password.startsWith('$2') ||
+            !(await bcrypt.compare(currentPassword, user.password))) {
             return res.status(401).json({
                 success: false,
-                message: 'Email is incorrect',
+                message: 'Email or current password is incorrect',
             });
         }
 

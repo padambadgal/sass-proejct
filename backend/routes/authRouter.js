@@ -11,7 +11,7 @@ import { registerValidation, loginValidation, validate } from '../middleware/val
 
 const router = express.Router();
 
-router.post('/register', registerValidation,  validate, register);
+router.post('/register', registerValidation, validate, register);
 router.post('/login', loginValidation, validate, login);
 router.post('/change-password', changePassword);
 router.post('/logout',protect, logout);

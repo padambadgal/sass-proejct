@@ -217,14 +217,14 @@ const BusinessList = () => {
             type="button"
             disabled
             title="Business limit reached — upgrade your plan"
-            className="inline-flex cursor-not-allowed items-center rounded-md bg-gray-400 px-4 py-2 text-white"
+            className="inline-flex self-start cursor-not-allowed items-center rounded-md bg-gray-400 px-4 py-2 text-white"
           >
             <Plus size={18} className="mr-2" /> Add Business
           </button>
         ) : (
           <Link
             to="/business/new"
-            className="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-white transition hover:bg-indigo-700"
+            className="inline-flex self-start items-center rounded-md bg-indigo-600 px-4 py-2 text-white transition hover:bg-indigo-700"
           >
             <Plus size={18} className="mr-2" /> Add Business
           </Link>

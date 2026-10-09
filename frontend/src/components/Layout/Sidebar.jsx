@@ -101,11 +101,12 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen = false, onClose }) => {
 
       {/* Sidebar */}
       <aside
+        id="app-sidebar"
         className={`
           fixed top-0 left-0 z-50 h-screen flex flex-col
           bg-white border-r border-gray-200
           transition-all duration-300 ease-in-out
-          ${collapsed ? 'w-20' : 'w-64'}
+          ${collapsed ? 'w-64 md:w-20' : 'w-64'}
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
           md:translate-x-0
         `}

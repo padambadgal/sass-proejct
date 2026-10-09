@@ -3,7 +3,12 @@ import Service from '../models/Service.js';
 import Availability from '../models/Availability.js';
 import Booking from '../models/Booking.js';
 import Subscription from '../models/Subscription.js';
-import {generateAvailableSlots,getAvailableSlotTimes,filterPastSlots,} from '../services/slotService.js';
+import {
+  generateAvailableSlots,
+  getAvailableSlotTimes,
+  filterPastSlots,
+  isDateInPast,
+} from '../services/slotService.js';
 import { createBooking } from '../services/bookingService.js';
 // Helper: Find business by slug and ensure it's active
 const findBusinessBySlug = async (slug) => {
@@ -180,7 +185,7 @@ export const getPublicSlots = async (req, res) => {
       date,
       totalDuration // ✅ pass duration
     );
-    slots = filterPastSlots(slots, date);
+    slots = filterPastSlots(slots, date, business.timezone);
 
     res.status(200).json({
       success: true,
@@ -340,7 +345,7 @@ export const getBookingByReference = async (req, res) => {
     }
 
     const booking = await Booking.findOne({ bookingReference: reference })
-      .populate('businessId', 'name slug')
+      .populate('businessId', 'name slug timezone')
       .populate('serviceId', 'name price duration');
 
     if (!booking) {
@@ -382,7 +387,7 @@ export const reschedulePublicBooking = async (req, res) => {
     }
 
     const booking = await Booking.findOne({ bookingReference: reference })
-      .populate('businessId', 'name slug')
+      .populate('businessId', 'name slug timezone')
       .populate('serviceId', 'name price duration');
 
     if (!booking) {
@@ -403,15 +408,17 @@ export const reschedulePublicBooking = async (req, res) => {
     }
 
     // Validate date
-    const newDate = new Date(date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (newDate < today) {
+    if (isDateInPast(date, booking.businessId.timezone)) {
       return res.status(400).json({ success: false, message: 'Cannot reschedule to a past date' });
     }
+    const newDate = new Date(`${date}T00:00:00Z`);
 
     // Check availability
-    const availableSlots = await getAvailableSlotTimes(booking.businessId, booking.serviceId, date);
+    const availableSlots = filterPastSlots(
+      await getAvailableSlotTimes(booking.businessId._id, booking.serviceId._id, date),
+      date,
+      booking.businessId.timezone
+    );
     if (!availableSlots.includes(startTime)) {
       return res.status(400).json({ success: false, message: 'Selected time slot is not available' });
     }

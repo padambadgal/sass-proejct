@@ -8,6 +8,7 @@ import {
   cancelBooking,
   rescheduleBooking,
   getOwnerBookings,
+  markBookingUnpaid,
 } from '../controllers/bookingController.js';
 
 
@@ -39,6 +40,7 @@ router.delete('/:id', protect, requireActiveSubscription, cancelBooking);
 
 // PATCH /api/bookings/:id/status
 router.patch('/:id/status', protect, requireActiveSubscription, updateBookingStatus);
+router.patch('/:id/payment/unpaid', protect, requireActiveSubscription, markBookingUnpaid);
 
 // Reschedule Route
 router.patch(

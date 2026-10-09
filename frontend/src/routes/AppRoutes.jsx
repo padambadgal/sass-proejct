@@ -37,7 +37,6 @@ import SubscriptionStatus from '../pages/Subscription/SubscriptionStatus';
 
 // Customer (Logged-in)
 import MyBookings from '../pages/Customers/MyBookings';
-import ChangePassword from '../pages/Auth/ChangePassword';
 
 const AppRoutes = () => {
   return (
@@ -48,7 +47,6 @@ const AppRoutes = () => {
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ChangePassword />} />
 
         {/* Customer Booking — public browse */}
         <Route path="/book" element={<BusinessListPage />} />

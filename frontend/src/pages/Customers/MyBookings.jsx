@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import apiClient from '../../api/client';
-import { Calendar, RefreshCcw, Loader2, Clock, MapPin, User } from 'lucide-react';
+import { Calendar, RefreshCw, Loader2, Clock, MapPin, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const MyBookings = () => {
@@ -104,7 +104,7 @@ const MyBookings = () => {
                               onClick={() => handleReschedule(b)}
                               className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1"
                             >
-                              <RefreshCcw size={16} /> Reschedule
+                              <RefreshCw size={16} /> Reschedule
                             </button>
                           )}
                         </td>
@@ -145,7 +145,7 @@ const MyBookings = () => {
                         onClick={() => handleReschedule(b)}
                         className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
                       >
-                        <RefreshCcw size={16} /> Reschedule
+                        <RefreshCw size={16} /> Reschedule
                       </button>
                     )}
                   </div>

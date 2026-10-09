@@ -2,7 +2,7 @@ import Booking from '../models/Booking.js';
 import Service from '../models/Service.js';
 import Business from '../models/Business.js';
 import Customer from '../models/Customer.js';
-import { getAvailableSlotTimes } from './slotService.js';
+import { filterPastSlots, getAvailableSlotTimes, isDateInPast } from './slotService.js';
 import { canCreateAppointment } from '../utils/planLimits.js';
 import { generateBookingReference } from '../utils/bookingReference.js';
 import { sendBookingConfirmation } from './notificationService.js';
@@ -35,10 +35,10 @@ export const createBooking = async (bookingData) => {
     if (!primaryService) throw new Error('Primary service not found or inactive for this business');
 
     // 3. Validate date
-    const bookingDate = new Date(date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (bookingDate < today) throw new Error('Cannot book for a past date');
+    if (isDateInPast(date, business.timezone)) {
+      throw new Error('Cannot book for a past date');
+    }
+    const bookingDate = new Date(`${date}T00:00:00Z`);
 
     // 4. Use provided totalDuration, or fallback to primary service duration
     const duration = totalDuration || primaryService.duration;
@@ -51,7 +51,11 @@ export const createBooking = async (bookingData) => {
     const endTime = `${String(Math.floor(endMinutes / 60)).padStart(2, '0')}:${String(endMinutes % 60).padStart(2, '0')}`;
 
     // 6. Check slot availability using duration
-    const availableSlots = await getAvailableSlotTimes(businessId, serviceId, date);
+    const availableSlots = filterPastSlots(
+      await getAvailableSlotTimes(businessId, serviceId, date),
+      date,
+      business.timezone
+    );
     if (!availableSlots.includes(startTime)) {
       throw new Error('Selected time slot is not available');
     }

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
+import { formatLocalDate } from '../../utils/date';
 
 const PublicBookingWizard = () => {
   const { user } = useAuth();
@@ -89,7 +90,7 @@ const PublicBookingWizard = () => {
   useEffect(() => {
     if (!selectedServices.length || !selectedDate || !business) return;
     const fetchSlots = async () => {
-      const dateStr = selectedDate.toISOString().split('T')[0];
+      const dateStr = formatLocalDate(selectedDate);
       setAvailableSlots([]);
       setSelectedSlot('');
       try {
@@ -117,7 +118,7 @@ const PublicBookingWizard = () => {
     try {
       const payload = {
         serviceIds: selectedServices.map((s) => s._id),
-        date: selectedDate.toISOString().split('T')[0],
+        date: formatLocalDate(selectedDate),
         startTime: selectedSlot,
         customer: {
           name: customer.name,

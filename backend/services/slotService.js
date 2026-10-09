@@ -105,18 +105,37 @@ export const getAvailableSlotTimes = async (
 /**
  * Filter out past slots
  */
-export const filterPastSlots = (slots, dateStr) => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const givenDate = new Date(dateStr + 'T00:00:00Z');
+const getDateTimeInTimezone = (timeZone, date = new Date()) => {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
 
-  if (givenDate < today) return [];
-  if (givenDate.getTime() === today.getTime()) {
-    const now = new Date();
-    const currentMin = now.getHours() * 60 + now.getMinutes();
+  return {
+    date: `${values.year}-${values.month}-${values.day}`,
+    minutes: Number(values.hour) * 60 + Number(values.minute),
+  };
+};
+
+export const isDateInPast = (dateStr, timeZone = 'Asia/Kolkata') => {
+  const { date: today } = getDateTimeInTimezone(timeZone);
+  return dateStr < today;
+};
+
+export const filterPastSlots = (slots, dateStr, timeZone = 'Asia/Kolkata') => {
+  const { date: today, minutes: currentMinutes } = getDateTimeInTimezone(timeZone);
+
+  if (dateStr < today) return [];
+  if (dateStr === today) {
     return slots.filter((slot) => {
-      const [h, m] = slot.split(':').map(Number);
-      return h * 60 + m >= currentMin;
+      const [hours, minutes] = slot.split(':').map(Number);
+      return hours * 60 + minutes > currentMinutes;
     });
   }
   return slots;

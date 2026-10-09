@@ -6,6 +6,7 @@ import {
   CheckCircle,
   RefreshCw,
   XCircle,
+  Ban,
   Calendar as CalIcon,
   Store,
   Plus,
@@ -13,6 +14,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatLocalDate } from '../../utils/date';
 import ReactDatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import RescheduleModal from './RescheduleModal';
@@ -28,7 +30,7 @@ const STEPS = [
   },
   {
     title: 'Manage bookings here',
-    text: 'Confirm, complete, cancel or reschedule.',
+    text: 'Confirm, complete (paid/unpaid) or reschedule.',
   },
 ];
 
@@ -53,7 +55,6 @@ const BookingList = () => {
       const res = await apiClient.get('/business/me');
       const list = res.data.data || [];
       setBusinesses(list);
-      // keep current selection if it still exists, otherwise pick the first one
       setSelectedBusinessId((prev) =>
         list.some((b) => b._id === prev) ? prev : list[0]?._id || ''
       );
@@ -88,7 +89,7 @@ const BookingList = () => {
     const fetchBookings = async () => {
       setLoading(true);
       try {
-        const dateStr = dateFilter.toISOString().split('T')[0];
+        const dateStr = formatLocalDate(dateFilter);
         let url = `/bookings?businessId=${selectedBusinessId}`;
         if (statusFilter !== 'all') url += `&status=${statusFilter}`;
         url += `&date=${dateStr}`;
@@ -110,21 +111,85 @@ const BookingList = () => {
     };
   }, [selectedBusinessId, statusFilter, dateFilter, refreshKey]);
 
-  /* ---------------- Actions ---------------- */
-  const handleStatusChange = async (bookingId, newStatus) => {
-    if (!window.confirm(`Change status to ${newStatus}?`)) return;
+  /* ---------------- Status transitions ----------------
+   * pending   → confirmed | cancelled (unpaid)
+   * confirmed → completed (paid) | completed (unpaid)
+   * completed → toggle paymentStatus only (paid ↔ unpaid)
+   * cancelled → (terminal)
+   * ---------------------------------------------------- */
+  const handleStatusChange = async (bookingId, newStatus, paymentStatus) => {
+    const payload = { status: newStatus };
+    if (paymentStatus) payload.paymentStatus = paymentStatus;
+
+    let confirmMsg = `Change status to ${newStatus}?`;
+    if (newStatus === 'confirmed') {
+      confirmMsg = 'Confirm this booking?';
+    } else if (newStatus === 'completed' && paymentStatus === 'paid') {
+      confirmMsg = 'Mark this booking as completed and PAID?';
+    } else if (newStatus === 'completed' && paymentStatus === 'unpaid') {
+      confirmMsg = 'Mark this booking as completed but UNPAID?';
+    } else if (newStatus === 'cancelled') {
+      confirmMsg = 'Cancel this booking?';
+    }
+
+    if (!window.confirm(confirmMsg)) return;
+
     try {
-      const response = await apiClient.patch(`/bookings/${bookingId}/status`, {
-        status: newStatus,
-      });
-      toast.success(`Booking ${newStatus}`);
+      const response = await apiClient.patch(
+        `/bookings/${bookingId}/status`,
+        payload
+      );
+
+      let label = newStatus;
+      if (newStatus === 'completed' && paymentStatus === 'paid') label = 'completed & paid';
+      else if (newStatus === 'completed' && paymentStatus === 'unpaid') label = 'completed (unpaid)';
+
+      toast.success(`Booking ${label}`);
       setBookings((prev) =>
         prev.map((b) =>
-          b._id === bookingId ? { ...b, ...response.data.data } : b
+          b._id === bookingId
+            ? {
+                ...b,
+                status: response.data.data.status,
+                paymentStatus:
+                  response.data.data.paymentStatus ?? b.paymentStatus,
+              }
+            : b
         )
       );
     } catch (err) {
       toast.error(err.response?.data?.message || 'Status update failed');
+    }
+  };
+
+  /* Toggle payment status only — used when booking is already completed */
+  const handleTogglePayment = async (bookingId, currentPaymentStatus) => {
+    const newPaymentStatus =
+      currentPaymentStatus === 'paid' ? 'unpaid' : 'paid';
+    const actionLabel =
+      newPaymentStatus === 'paid' ? 'mark as PAID' : 'mark as UNPAID';
+
+    if (!window.confirm(`Are you sure you want to ${actionLabel}?`)) return;
+
+    try {
+      const response = await apiClient.patch(
+        `/bookings/${bookingId}/status`,
+        { paymentStatus: newPaymentStatus }
+      );
+      toast.success(`Payment ${newPaymentStatus}`);
+      setBookings((prev) =>
+        prev.map((b) =>
+          b._id === bookingId
+            ? {
+                ...b,
+                paymentStatus:
+                  response.data.data.paymentStatus ?? newPaymentStatus,
+              }
+            : b
+        )
+      );
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Payment update failed');
     }
   };
 
@@ -141,11 +206,9 @@ const BookingList = () => {
     cancelled: 'bg-red-100 text-red-800',
   };
 
-  const statusActions = {
-    pending: ['confirmed', 'cancelled'],
-    confirmed: ['completed', 'cancelled'],
-    completed: [],
-    cancelled: [],
+  const paymentColors = {
+    paid: 'bg-green-100 text-green-800',
+    unpaid: 'bg-orange-100 text-orange-800',
   };
 
   /* ---------------- Loaders ---------------- */
@@ -162,7 +225,6 @@ const BookingList = () => {
     return (
       <div className="mx-auto max-w-3xl py-6">
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-          {/* Header */}
           <div className="border-b border-gray-100 bg-gradient-to-b from-indigo-50/80 to-white px-6 py-10 text-center sm:px-10">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-indigo-100 ring-8 ring-indigo-50">
               <Store className="h-8 w-8 text-indigo-600" aria-hidden="true" />
@@ -177,7 +239,6 @@ const BookingList = () => {
             </p>
           </div>
 
-          {/* Steps */}
           <ol className="grid gap-4 px-6 py-6 sm:grid-cols-3 sm:px-10">
             {STEPS.map((step, i) => (
               <li
@@ -197,7 +258,6 @@ const BookingList = () => {
             ))}
           </ol>
 
-          {/* Actions */}
           <div className="flex flex-col-reverse gap-3 border-t border-gray-100 bg-gray-50 px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-10">
             <button
               type="button"
@@ -284,7 +344,6 @@ const BookingList = () => {
         </div>
       </div>
 
-      {/* Loading spinner for bookings */}
       {loading ? (
         <div className="flex h-64 items-center justify-center">
           <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-indigo-600" />
@@ -308,6 +367,7 @@ const BookingList = () => {
                   'Date',
                   'Time',
                   'Status',
+                  'Payment',
                   'Actions',
                 ].map((h) => (
                   <th
@@ -346,7 +406,18 @@ const BookingList = () => {
                       {b.status}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-sm">
+                    <span
+                      className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
+                        paymentColors[b.paymentStatus] ||
+                        'bg-orange-100 text-orange-800'
+                      }`}
+                    >
+                      {b.paymentStatus || 'unpaid'}
+                    </span>
+                  </td>
                   <td className="space-x-2 whitespace-nowrap px-4 py-3 text-sm font-medium">
+                    {/* View — always available */}
                     <Link
                       to={`/bookings/${b._id}`}
                       className="text-blue-600 transition hover:text-blue-900"
@@ -355,42 +426,91 @@ const BookingList = () => {
                       <Eye size={18} className="inline" />
                     </Link>
 
-                    {statusActions[b.status]?.includes('confirmed') && (
-                      <button
-                        type="button"
-                        onClick={() => handleStatusChange(b._id, 'confirmed')}
-                        className="text-blue-600 transition hover:text-blue-900"
-                        title="Confirm"
-                      >
-                        <CheckCircle size={18} className="inline" />
-                      </button>
+                    {/* PENDING → Confirm · Cancel · Reschedule */}
+                    {b.status === 'pending' && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleStatusChange(b._id, 'confirmed')
+                          }
+                          className="text-blue-600 transition hover:text-blue-900"
+                          title="Confirm booking"
+                        >
+                          <CheckCircle size={18} className="inline" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleStatusChange(b._id, 'cancelled')
+                          }
+                          className="text-red-600 transition hover:text-red-900"
+                          title="Cancel booking"
+                        >
+                          <Ban size={18} className="inline" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRescheduleBooking(b)}
+                          className="text-indigo-600 transition hover:text-indigo-900"
+                          title="Reschedule"
+                        >
+                          <RefreshCw size={18} className="inline" />
+                        </button>
+                      </>
                     )}
-                    {statusActions[b.status]?.includes('completed') && (
-                      <button
-                        type="button"
-                        onClick={() => handleStatusChange(b._id, 'completed')}
-                        className="text-green-600 transition hover:text-green-900"
-                        title="Complete"
-                      >
-                        <CheckCircle size={18} className="inline" />
-                      </button>
+
+                    {/* CONFIRMED → Complete Paid · Complete Unpaid · Reschedule */}
+                    {b.status === 'confirmed' && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleStatusChange(b._id, 'completed', 'paid')
+                          }
+                          className="text-green-600 transition hover:text-green-900"
+                          title="Complete & mark as paid"
+                        >
+                          <CheckCircle size={18} className="inline" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleStatusChange(b._id, 'completed', 'unpaid')
+                          }
+                          className="text-amber-600 transition hover:text-amber-900"
+                          title="Complete (unpaid)"
+                        >
+                          <XCircle size={18} className="inline" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRescheduleBooking(b)}
+                          className="text-indigo-600 transition hover:text-indigo-900"
+                          title="Reschedule"
+                        >
+                          <RefreshCw size={18} className="inline" />
+                        </button>
+                      </>
                     )}
-                    {statusActions[b.status]?.includes('cancelled') && (
+
+                    {/* COMPLETED → toggle payment status only */}
+                    {b.status === 'completed' && (
                       <button
                         type="button"
-                        onClick={() => handleStatusChange(b._id, 'cancelled')}
-                        className="text-red-600 transition hover:text-red-900"
-                        title="Cancel"
-                      >
-                        <XCircle size={18} className="inline" />
-                      </button>
-                    )}
-                    {['pending', 'confirmed'].includes(b.status) && (
-                      <button
-                        type="button"
-                        onClick={() => setRescheduleBooking(b)}
-                        className="text-indigo-600 transition hover:text-indigo-900"
-                        title="Reschedule"
+                        onClick={() =>
+                          handleTogglePayment(b._id, b.paymentStatus)
+                        }
+                        className={`${
+                          b.paymentStatus === 'paid'
+                            ? 'text-orange-600 hover:text-orange-900'
+                            : 'text-green-600 hover:text-green-900'
+                        } transition`}
+                        title={
+                          b.paymentStatus === 'paid'
+                            ? 'Mark as unpaid'
+                            : 'Mark as paid'
+                        }
                       >
                         <RefreshCw size={18} className="inline" />
                       </button>
