@@ -6,12 +6,16 @@ export const generateBookingConfirmationHTML = (booking) => {
   const serviceName = booking.serviceId?.name || 'Service';
   const date = new Date(booking.date).toLocaleDateString('en-IN');
   const time = booking.startTime + ' - ' + booking.endTime;
+  const bookingMessage =
+    booking.status === 'confirmed'
+      ? `Your booking has been confirmed with <strong>${businessName}</strong>.`
+      : `We received your booking request for <strong>${businessName}</strong>. The business will confirm it shortly.`;
 
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-      <h2 style="color: #333;">Booking Confirmation</h2>
+      <h2 style="color: #333;">${booking.status === 'confirmed' ? 'Booking Confirmation' : 'Booking Request Received'}</h2>
       <p>Dear ${booking.customer.name},</p>
-      <p>Your booking has been confirmed with <strong>${businessName}</strong>.</p>
+      <p>${bookingMessage}</p>
       <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
         <tr>
           <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Booking Reference</strong></td>

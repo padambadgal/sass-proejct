@@ -1,3 +1,4 @@
+import cloudinary from '../config/cloudinary.js';
 import Service from '../models/Service.js';
 import Business from '../models/Business.js';
 import { canCreateService } from '../utils/planLimits.js';
@@ -11,12 +12,54 @@ const validateBusinessOwnership = async (businessId, userId) => {
   return business;
 };
 
+// Helper: apply avatar-style image update to a Service document.
+// Handles three modes: file upload, URL string, explicit removal.
+const applyServiceImage = async (service, req) => {
+  const oldPublicId = service.imagePublicId || null;
+
+  // Mode 1: file uploaded → CloudinaryStorage already uploaded it
+  if (req.file?.path) {
+    service.image = req.file.path;
+    service.imagePublicId = req.file.filename;
+
+    if (oldPublicId) {
+      cloudinary.uploader.destroy(oldPublicId).catch(() => {});
+    }
+  }
+  // Mode 2: URL string in JSON body
+  else if (typeof req.body.image === 'string' && req.body.image.trim() !== '') {
+    service.image = req.body.image.trim();
+  }
+
+  // Mode 3: explicit removal
+  if (req.body.deleteImage === 'true' || req.body.deleteImage === true) {
+    service.image = null;
+    service.imagePublicId = null;
+    if (oldPublicId) {
+      cloudinary.uploader.destroy(oldPublicId).catch(() => {});
+    }
+  }
+};
+
 // @desc    Create a new service
 // @route   POST /api/services
 // @access  Private (requires active subscription)
 export const createService = async (req, res, next) => {
   try {
-    const { businessId, name, description, price, duration, image } = req.body;
+    const { businessId, name, description, price, duration } = req.body || {};
+
+    console.log('[createService] body:', req.body);
+    console.log('[createService] file:', req.file
+      ? { path: req.file.path, filename: req.file.filename, mimetype: req.file.mimetype, size: req.file.size }
+      : 'NO FILE');
+
+    // Validate required fields
+    if (!businessId || !name || price === undefined || duration === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'businessId, name, price and duration are required',
+      });
+    }
 
     // Validate business ownership
     await validateBusinessOwnership(businessId, req.user._id);
@@ -30,27 +73,35 @@ export const createService = async (req, res, next) => {
       });
     }
 
-    // Create service
-    const service = await Service.create({
+    // Create service via `new` + `save()` so pre-save hooks run and
+    // applyServiceImage can set the imagePublicId alongside image.
+    const service = new Service({
       businessId,
       name,
       description: description || '',
       price,
       duration,
-      image: image || null,
       status: 'active',
     });
 
-    res.status(201).json({
+    await applyServiceImage(service, req);
+    await service.save();
+
+    return res.status(201).json({
       success: true,
       message: 'Service created successfully',
       data: service,
     });
   } catch (error) {
+    console.error('Create service error:', error);
+
     if (error.message === 'Business not found or you do not own it') {
       return res.status(404).json({ success: false, message: error.message });
     }
-    next(error);
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    return next(error);
   }
 };
 
@@ -67,13 +118,11 @@ export const getServices = async (req, res, next) => {
       });
     }
 
-    // Validate ownership
     await validateBusinessOwnership(businessId, req.user._id);
 
-    // Fetch services
     const services = await Service.find({ businessId }).sort({ createdAt: -1 });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: services,
     });
@@ -81,7 +130,7 @@ export const getServices = async (req, res, next) => {
     if (error.message === 'Business not found or you do not own it') {
       return res.status(404).json({ success: false, message: error.message });
     }
-    next(error);
+    return next(error);
   }
 };
 
@@ -92,16 +141,12 @@ export const getServiceById = async (req, res, next) => {
   try {
     const service = await Service.findById(req.params.id);
     if (!service) {
-      return res.status(404).json({
-        success: false,
-        message: 'Service not found',
-      });
+      return res.status(404).json({ success: false, message: 'Service not found' });
     }
 
-    // Check ownership via the business
     await validateBusinessOwnership(service.businessId, req.user._id);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: service,
     });
@@ -109,7 +154,7 @@ export const getServiceById = async (req, res, next) => {
     if (error.message === 'Business not found or you do not own it') {
       return res.status(404).json({ success: false, message: error.message });
     }
-    next(error);
+    return next(error);
   }
 };
 
@@ -118,50 +163,62 @@ export const getServiceById = async (req, res, next) => {
 // @access  Private
 export const updateService = async (req, res, next) => {
   try {
-    let service = await Service.findById(req.params.id);
+    const service = await Service.findById(req.params.id);
     if (!service) {
-      return res.status(404).json({
-        success: false,
-        message: 'Service not found',
-      });
+      return res.status(404).json({ success: false, message: 'Service not found' });
     }
 
-    // Check ownership
+    // Ownership check via the parent business
     await validateBusinessOwnership(service.businessId, req.user._id);
 
-    // Allowed fields to update
-    const allowedUpdates = ['name', 'description', 'price', 'duration', 'image', 'status'];
-    const updates = {};
-    allowedUpdates.forEach(field => {
+    console.log('[updateService] body keys:', Object.keys(req.body || {}));
+    console.log('[updateService] file:', req.file
+      ? { path: req.file.path, filename: req.file.filename, mimetype: req.file.mimetype, size: req.file.size }
+      : 'NO FILE');
+
+    // Allowed text fields (image handled separately by applyServiceImage)
+    const allowedUpdates = ['name', 'description', 'price', 'duration', 'status'];
+    allowedUpdates.forEach((field) => {
       if (req.body[field] !== undefined) {
-        updates[field] = req.body[field];
+        service[field] = req.body[field];
       }
     });
 
-    if (service.status === 'inactive' && updates.status === 'active' &&
-        !(await canCreateService(service.businessId))) {
+    // Re-activation limit check
+    if (
+      service.status === 'inactive' &&
+      req.body.status === 'active' &&
+      !(await canCreateService(service.businessId))
+    ) {
       return res.status(403).json({
         success: false,
         message: 'Service limit reached for your current plan. Deactivate another service or upgrade your plan.',
       });
     }
 
-    // Apply updates
-    service = await Service.findByIdAndUpdate(req.params.id, updates, {
-      returnDocument: 'after',
-      runValidators: true,
-    });
+    // Apply image changes (file / URL / delete)
+    await applyServiceImage(service, req);
 
-    res.status(200).json({
+    await service.save();
+
+    return res.status(200).json({
       success: true,
       message: 'Service updated successfully',
       data: service,
     });
   } catch (error) {
+    console.error('Update service error:', error);
+
     if (error.message === 'Business not found or you do not own it') {
       return res.status(404).json({ success: false, message: error.message });
     }
-    next(error);
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    if (error.code === 11000) {
+      return res.status(409).json({ success: false, message: 'Duplicate field value' });
+    }
+    return next(error);
   }
 };
 
@@ -172,20 +229,15 @@ export const deleteService = async (req, res, next) => {
   try {
     const service = await Service.findById(req.params.id);
     if (!service) {
-      return res.status(404).json({
-        success: false,
-        message: 'Service not found',
-      });
+      return res.status(404).json({ success: false, message: 'Service not found' });
     }
 
-    // Check ownership
     await validateBusinessOwnership(service.businessId, req.user._id);
 
-    // Soft delete: set status to inactive
     service.status = 'inactive';
     await service.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: 'Service deactivated successfully',
       data: { id: service._id, status: service.status },
@@ -194,6 +246,6 @@ export const deleteService = async (req, res, next) => {
     if (error.message === 'Business not found or you do not own it') {
       return res.status(404).json({ success: false, message: error.message });
     }
-    next(error);
+    return next(error);
   }
 };

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import apiClient from '../../api/client';
-import { Calendar, RefreshCw, Loader2, Clock, MapPin, User } from 'lucide-react';
+import { Calendar, RefreshCw, Loader2, Clock, MapPin, User, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const MyBookings = () => {
@@ -48,8 +48,14 @@ const MyBookings = () => {
 
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">My Bookings</h1>
+      <div className="md:flex flex-wrap items-center justify-between gap-3 mb-6">
+        <button
+        onClick={() => navigate('/book')}
+        className="mb-4 flex items-center cursor-pointer gap-2 text-gray-600 hover:text-gray-900"
+      >
+        <ArrowLeft size={18} /> Back
+      </button>
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">My Bookings</h1>
         <Link
           to="/book"
           className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition"

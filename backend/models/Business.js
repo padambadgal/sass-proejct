@@ -21,7 +21,11 @@ const businessSchema = new mongoose.Schema(
       default: '',
     },
     logo: {
-      type: String, // URL to uploaded logo (we'll handle uploads later)
+      type: String,        // Cloudinary secure_url
+      default: null,
+    },
+    logoPublicId: {        // Cloudinary public_id — for deleting old image
+      type: String,
       default: null,
     },
     phone: {
@@ -48,10 +52,9 @@ const businessSchema = new mongoose.Schema(
     },
     timezone: {
       type: String,
-      default: 'Asia/Kolkata', // Default to IST
+      default: 'Asia/Kolkata',
     },
     bankAccount: {
-      // For future payouts
       accountHolderName: { type: String, default: '' },
       accountNumber: { type: String, default: '' },
       bankName: { type: String, default: '' },
@@ -67,16 +70,12 @@ const businessSchema = new mongoose.Schema(
       default: true,
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-// Indexes for faster lookups
-businessSchema.index({ slug: true });
+businessSchema.index({ slug: 1 });
 businessSchema.index({ ownerId: 1 });
 
-// Pre-save middleware to generate slug from name if not provided
 businessSchema.pre('save', function () {
   if (this.isModified('name') && !this.slug) {
     this.slug = this.name

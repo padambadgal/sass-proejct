@@ -1,33 +1,38 @@
-import express from "express";
-
+import express from 'express';
+import { protect } from '../middleware/authMiddleware.js';
+import { requireActiveSubscription } from '../middleware/subscriptionMiddleware.js';
+import { uploadBusinessLogo } from '../middleware/uploadMiddleware.js';
 import {
-    createBusiness,
-    getMyBusinesses,
-    getBusinessById,
-    updateBusiness,
-    deleteBusiness
-} from "../controllers/businessController.js";
-
-import { protect } from "../middleware/authMiddleware.js";
-import { requireActiveSubscription } from "../middleware/subscriptionMiddleware.js";
+  createBusiness,
+  getMyBusinesses,
+  getBusinessById,
+  updateBusiness,
+  deleteBusiness,
+} from '../controllers/businessController.js';
 
 const router = express.Router();
 
-// GET /api/business
-router.get("/me", protect, requireActiveSubscription, getMyBusinesses);
+// Note: multer runs after auth so it doesn't waste an upload on unauth requests
+router.get('/me', protect, requireActiveSubscription, getMyBusinesses);
 
-// POST /api/business
-router.post("/", protect, requireActiveSubscription, createBusiness);
+router.post(
+  '/',
+  protect,
+  requireActiveSubscription,
+  uploadBusinessLogo.single('logo'),
+  createBusiness
+);
 
+router.get('/:id', protect, requireActiveSubscription, getBusinessById);
 
-// router.get('/:id', getBusinessById);
-// GET /api/business/:id
-router.get("/:id", protect, requireActiveSubscription, getBusinessById);
+router.patch(
+  '/:id',
+  protect,
+  requireActiveSubscription,
+  uploadBusinessLogo.single('logo'),
+  updateBusiness
+);
 
-// PATCH /api/business/:id
-router.patch("/:id", protect, requireActiveSubscription, updateBusiness);
-
-// DELETE /api/business/:id
-router.delete("/:id", protect, requireActiveSubscription, deleteBusiness);
+router.delete('/:id', protect, requireActiveSubscription, deleteBusiness);
 
 export default router;

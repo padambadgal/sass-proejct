@@ -121,6 +121,11 @@ export const createBooking = async (bookingData) => {
     await booking.populate('serviceId', 'name price duration');
     await booking.populate('businessId', 'name slug');
 
+    // Notify the customer and business immediately, regardless of booking status.
+    sendBookingConfirmation(booking).catch((error) => {
+      console.error('Booking notification error:', error);
+    });
+
     return booking;
   } catch (error) {
     if (error.code === 11000) {

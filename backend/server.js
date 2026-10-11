@@ -22,8 +22,7 @@ import customerRoutes from './routes/customerRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import publicRoutes from './routes/publicRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
-import uploadRoutes from './routes/uploadRoutes.js';
-
+import profileRoutes from './routes/profileRoutes.js';
 import { errorHandler } from './middleware/errorMiddleware.js';
 
 const app = express();
@@ -67,6 +66,9 @@ app.use('/api', globalLimiter);
 
 // ✅ Routes
 app.use('/api/auth', userRouter);
+
+app.use('/api/profile', profileRoutes);
+
 app.use('/api/subscriptions', subscriptionRouter);
 app.use('/api/payments', paymentRouter);
 app.use('/api/business', businessRoutes);
@@ -78,7 +80,20 @@ app.use('/api/customers', customerRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/upload', uploadRoutes);
+
+app.use((err, req, res, next) => {
+  console.error('Upload error details:', {
+    message: err.message,
+    http_code: err.http_code,
+    name: err.name,
+    storageErrors: err.storageErrors,
+  });
+
+  res.status(err.http_code || 500).json({
+    success: false,
+    message: err.message || 'Upload failed',
+  });
+});
 
 // 404
 app.use((req, res) => {

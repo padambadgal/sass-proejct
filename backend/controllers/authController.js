@@ -2,6 +2,16 @@ import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from "bcryptjs";
 
+const getSafeUser = (user) => ({
+    _id: user._id,
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    phone: user.phone || '',
+    avatar: user.avatar || '',
+});
+
 
 export const register = async (req, res) => {
     try {
@@ -45,13 +55,7 @@ export const register = async (req, res) => {
         res.status(201).json({
             success: true,
             message: 'User created successfully',
-            data: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                phone: user.phone,
-            },
+            data: getSafeUser(user),
             token,
         });
     } catch (error) {
@@ -105,13 +109,7 @@ export const login = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: 'Login successful',
-            data: {
-                id: existingUser._id,
-                email: existingUser.email,
-                name: existingUser.name,
-                role: existingUser.role,        // ✅ add
-                phone: existingUser.phone,
-            },
+            data: getSafeUser(existingUser),
             token: token,
         });
     } catch (error) {
@@ -123,46 +121,47 @@ export const login = async (req, res) => {
     }
 };
 
-export const changePassword = async (req, res) => {
-    try {
-        const { email: rawEmail, currentPassword, newPassword } = req.body;
-        const email = typeof rawEmail === 'string' ? rawEmail.trim().toLowerCase() : '';
-        if (!email || typeof currentPassword !== 'string' || typeof newPassword !== 'string') {
-            return res.status(400).json({
-                success: false,
-                message: 'Email, current password, and new password are required',
-            });
-        }
-        if (newPassword.length < 6) {
-            return res.status(400).json({
-                success: false,
-                message: 'Password must be at least 6 characters long',
-            });
-        }
+export const forgetPassword = async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
 
-        const user = await User.findOne({ email }).select('+password');
-        if (!user || typeof user.password !== 'string' || !user.password.startsWith('$2') ||
-            !(await bcrypt.compare(currentPassword, user.password))) {
-            return res.status(401).json({
-                success: false,
-                message: 'Email or current password is incorrect',
-            });
-        }
-
-        user.password = await bcrypt.hash(newPassword, 10);
-        await user.save();
-
-        return res.status(200).json({
-            success: true,
-            message: 'Password changed successfully. You can now sign in with your new password.',
-        });
-    } catch (error) {
-        console.error('Change password error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Unable to change your password right now.',
-        });
+    if (!email || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide email and new password',
+      });
     }
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 6 characters',
+      });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'Email not found' });
+    }
+
+    // const isMatch = await bcrypt.compare(currentPassword, user.password);
+    // if (!isMatch) {
+    //   return res
+    //     .status(401)
+    //     .json({ success: false, message: 'Current password is incorrect' });
+    // }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res
+      .status(200)
+      .json({ success: true, message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 };
 
 export const logout = (req, res) => {
@@ -177,6 +176,6 @@ export const logout = (req, res) => {
 export const getMe = async (req, res) => {
     res.status(200).json({
         success: true,
-        data: req.user,
+        data: getSafeUser(req.user),
     });
 };

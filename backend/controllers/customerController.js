@@ -1,8 +1,6 @@
 import Customer from '../models/Customer.js';
 import Business from '../models/Business.js';
 import Booking from '../models/Booking.js';
-import Service from '../models/Service.js';
-import { getAvailableSlotTimes } from '../services/slotService.js';
 
 // Helper: Check business ownership
 const validateBusinessOwnership = async (businessId, userId) => {

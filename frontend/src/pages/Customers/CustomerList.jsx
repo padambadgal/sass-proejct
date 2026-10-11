@@ -316,14 +316,14 @@ const CustomerList = () => {
                     >
                       <Eye size={18} className="inline cursor-pointer" />
                     </Link>
-                    <Link
+                    {/* <Link
                       to={`/customers/${c._id}/edit`}
                       aria-label={`Edit ${c.name}`}
                       className="text-indigo-600 hover:text-indigo-900"
                     >
                       <Edit size={18} className="inline cursor-pointer" />
-                    </Link>
-                    <button
+                    </Link> */}
+                    {/* <button
                       type="button"
                       onClick={() => handleToggleStatus(c._id, c.status)}
                       disabled={togglingId === c._id}
@@ -343,7 +343,7 @@ const CustomerList = () => {
                       ) : (
                         <Power size={18} className="inline cursor-pointer" />
                       )}
-                    </button>
+                    </button> */}
                   </td>
                 </tr>
               ))}

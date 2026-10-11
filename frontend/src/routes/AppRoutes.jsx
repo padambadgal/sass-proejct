@@ -37,7 +37,8 @@ import SubscriptionStatus from '../pages/Subscription/SubscriptionStatus';
 
 // Customer (Logged-in)
 import MyBookings from '../pages/Customers/MyBookings';
-
+import ProfileRoute from './ProfileRoute';
+import ChangePassword from '../pages/Auth/ChangePassword';
 const AppRoutes = () => {
   return (
     <BrowserRouter>
@@ -46,10 +47,12 @@ const AppRoutes = () => {
         <Route path="/" element={<Landing />} />
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ChangePassword />} />
         <Route path="/register" element={<Register />} />
 
         {/* Customer Booking — public browse */}
         <Route path="/book" element={<BusinessListPage />} />
+        
 
         {/* Customer Reschedule — public with reference */}
         <Route
@@ -62,6 +65,7 @@ const AppRoutes = () => {
 
         {/* ============ LOGGED IN ============ */}
         <Route element={<ProtectedRoute />}>
+        <Route path="/profile" element={<ProfileRoute />} />
           {/* Checkout / Payment */}
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />
@@ -73,7 +77,6 @@ const AppRoutes = () => {
           <Route element={<Layout />}>
             <Route element={<SubscriptionGuard />}>
               <Route path="/dashboard" element={<Dashboard />} />
-
               <Route path="/business" element={<BusinessList />} />
               <Route path="/business/new" element={<BusinessForm />} />
               <Route path="/business/:id/edit" element={<BusinessForm />} />

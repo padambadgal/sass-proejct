@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 
-const Layout = () => {
+const Layout = ({ children }) => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => localStorage.getItem('sidebar_collapsed') === 'true'
@@ -31,7 +31,7 @@ const Layout = () => {
           sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'
         }`}
       >
-        <Outlet />
+        {children || <Outlet />}
       </main>
     </div>
   );

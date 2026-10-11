@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Sparkles,
   X,
+  UserCog,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
@@ -22,9 +23,7 @@ import { useSocket } from '../../context/SocketContext';
 const ownerSections = [
   {
     title: 'Overview',
-    items: [
-      { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    ],
+    items: [{ to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }],
   },
   {
     title: 'Manage',
@@ -38,12 +37,7 @@ const ownerSections = [
   {
     title: 'Operations',
     items: [
-      {
-        to: '/bookings',
-        label: 'Bookings',
-        icon: CalendarDays,
-        badgeKey: 'bookings',
-      },
+      { to: '/bookings', label: 'Bookings', icon: CalendarDays, badgeKey: 'bookings' },
       { to: '/customers', label: 'Customers', icon: UserRound },
     ],
   },
@@ -51,6 +45,7 @@ const ownerSections = [
     title: 'Account',
     items: [
       { to: '/subscription', label: 'Subscription', icon: CreditCard },
+      { to: '/profile', label: 'My Profile', icon: UserCog },
     ],
   },
 ];
@@ -113,9 +108,8 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen = false, onClose }) => {
       >
         {/* ===== Brand Header ===== */}
         <div
-          className={`flex items-center justify-between h-16 border-b border-gray-100 ${
-            collapsed ? 'px-2' : 'px-4'
-          }`}
+          className={`flex items-center justify-between h-16 border-b border-gray-100 ${collapsed ? 'px-2' : 'px-4'
+            }`}
         >
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 flex-shrink-0">
@@ -194,14 +188,12 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen = false, onClose }) => {
                         to={item.to}
                         title={collapsed ? item.label : undefined}
                         className={({ isActive }) =>
-                          `group relative flex items-center rounded-xl transition-all duration-200 ${
-                            collapsed
-                              ? 'justify-center p-3'
-                              : 'gap-3 px-3 py-2.5'
-                          } ${
-                            isActive
-                              ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md shadow-indigo-500/25'
-                              : 'text-gray-600 hover:bg-indigo-50 hover:text-indigo-600'
+                          `group relative flex items-center rounded-xl transition-all duration-200 ${collapsed
+                            ? 'justify-center p-3'
+                            : 'gap-3 px-3 py-2.5'
+                          } ${isActive
+                            ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md shadow-indigo-500/25'
+                            : 'text-gray-600 hover:bg-indigo-50 hover:text-indigo-600'
                           }`
                         }
                       >
@@ -221,15 +213,13 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen = false, onClose }) => {
                             {/* Badge */}
                             {badgeCount > 0 && (
                               <span
-                                className={`${
-                                  collapsed
+                                className={`${collapsed
                                     ? 'absolute -top-1 -right-1'
                                     : 'ml-auto'
-                                } ${
-                                  isActive
+                                  } ${isActive
                                     ? 'bg-white text-indigo-600'
                                     : 'bg-red-500 text-white'
-                                } text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center`}
+                                  } text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center`}
                               >
                                 {badgeCount > 9 ? '9+' : badgeCount}
                               </span>
@@ -252,9 +242,8 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen = false, onClose }) => {
 
         {/* ===== User Footer ===== */}
         <div
-          className={`border-t border-gray-100 p-3 ${
-            collapsed ? 'flex justify-center' : ''
-          }`}
+          className={`border-t border-gray-100 p-3 ${collapsed ? 'flex justify-center' : ''
+            }`}
         >
           {collapsed ? (
             <button

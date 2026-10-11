@@ -111,7 +111,7 @@ const Login = () => {
             <button
               type="button"
               onClick={() => navigate('/forgot-password')}
-              className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
+              className="text-sm font-medium cursor-pointer text-indigo-600 hover:text-indigo-500"
             >
               Forgot password?
             </button>
@@ -119,7 +119,7 @@ const Login = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full flex justify-center py-2.5 px-4 text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition"
+            className="w-full flex cursor-pointer justify-center py-2.5 px-4 text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition"
           >
             {isSubmitting ? 'Signing in...' : 'Sign in'}
           </button>

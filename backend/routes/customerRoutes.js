@@ -35,5 +35,4 @@ router.patch('/:id', protect, requireActiveSubscription, updateCustomer);
 // Delete customer
 router.delete('/:id', protect, requireActiveSubscription, deleteCustomer);
 
-
 export default router;

@@ -1,5 +1,7 @@
 import express from 'express';
-
+import { protect } from '../middleware/authMiddleware.js';
+import { requireActiveSubscription } from '../middleware/subscriptionMiddleware.js';
+import { uploadServiceImage } from '../middleware/uploadMiddleware.js';
 import {
   createService,
   getServices,
@@ -8,24 +10,28 @@ import {
   deleteService,
 } from '../controllers/serviceController.js';
 
-import { protect } from '../middleware/authMiddleware.js';
-import { requireActiveSubscription } from '../middleware/subscriptionMiddleware.js';
-
 const router = express.Router();
 
-// GET /api/services
-router.get('/',  protect, requireActiveSubscription, getServices);
+router.get('/', protect, requireActiveSubscription, getServices);
 
-// POST /api/services
-router.post('/', protect, requireActiveSubscription, createService);
+router.post(
+  '/',
+  protect,
+  requireActiveSubscription,
+  uploadServiceImage.single('image'),   // field name = 'image'
+  createService
+);
 
-// GET /api/services/:id
 router.get('/:id', protect, requireActiveSubscription, getServiceById);
 
-// PATCH /api/services/:id
-router.patch('/:id', protect, requireActiveSubscription, updateService);
+router.patch(
+  '/:id',
+  protect,
+  requireActiveSubscription,
+  uploadServiceImage.single('image'),   // field name = 'image'
+  updateService
+);
 
-// DELETE /api/services/:id
 router.delete('/:id', protect, requireActiveSubscription, deleteService);
 
 export default router;

@@ -29,7 +29,11 @@ const serviceSchema = new mongoose.Schema(
       min: [1, 'Duration must be at least 1 minute'],
     },
     image: {
-      type: String, // URL to uploaded image
+      type: String,        // Cloudinary secure_url
+      default: null,
+    },
+    imagePublicId: {
+      type: String,        // Cloudinary public_id
       default: null,
     },
     status: {

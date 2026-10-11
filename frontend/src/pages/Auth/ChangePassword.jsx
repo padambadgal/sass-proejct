@@ -28,7 +28,7 @@ const ChangePassword = () => {
 
   const onChangePassword = async ({ email, newPassword }) => {
     try {
-      const response = await apiClient.post('/auth/change-password', {
+      const response = await apiClient.post('/auth/forgot-password', {
         email,
         newPassword,
       });
@@ -124,7 +124,7 @@ const ChangePassword = () => {
             <button
               type="submit"
               disabled={changePasswordForm.formState.isSubmitting}
-              className="w-full flex justify-center py-2.5 px-4 text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition"
+              className="w-full cursor-pointer flex justify-center py-2.5 px-4 text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition"
             >
               {changePasswordForm.formState.isSubmitting ? 'Changing password...' : 'Change password'}
             </button>
