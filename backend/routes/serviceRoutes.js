@@ -1,37 +1,18 @@
 import express from 'express';
 import { protect } from '../middleware/authMiddleware.js';
-import { requireActiveSubscription } from '../middleware/subscriptionMiddleware.js';
-import { uploadServiceImage } from '../middleware/uploadMiddleware.js';
+import { uploadServiceImage } from '../middleware/uploadMiddleware.js';  // ← service image
 import {
-  createService,
-  getServices,
-  getServiceById,
-  updateService,
-  deleteService,
+  createService, getServices, getServiceById,
+  updateService, deleteService,
 } from '../controllers/serviceController.js';
 
 const router = express.Router();
+router.use(protect);
 
-router.get('/', protect, requireActiveSubscription, getServices);
-
-router.post(
-  '/',
-  protect,
-  requireActiveSubscription,
-  uploadServiceImage.single('image'),   // field name = 'image'
-  createService
-);
-
-router.get('/:id', protect, requireActiveSubscription, getServiceById);
-
-router.patch(
-  '/:id',
-  protect,
-  requireActiveSubscription,
-  uploadServiceImage.single('image'),   // field name = 'image'
-  updateService
-);
-
-router.delete('/:id', protect, requireActiveSubscription, deleteService);
+router.post('/', uploadServiceImage.single('image'), createService);  // field: 'image'
+router.patch('/:id', uploadServiceImage.single('image'), updateService);  // field: 'image'
+router.get('/', getServices);
+router.get('/:id', getServiceById);
+router.delete('/:id', deleteService);
 
 export default router;

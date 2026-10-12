@@ -48,6 +48,7 @@ const BusinessForm = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(false);
+  const [logoFile, setLogoFile] = useState(null);
 
   const {
     register,
@@ -120,11 +121,23 @@ const BusinessForm = () => {
   const onSubmit = async (data) => {
     setLoading(true);
     try {
+      const payload = logoFile ? new FormData() : data;
+      if (logoFile) {
+        Object.entries(data).forEach(([key, value]) => {
+          payload.append(key, key === 'address' ? JSON.stringify(value) : value);
+        });
+        payload.append('logo', logoFile);
+      }
+
       if (id) {
-        await apiClient.patch(`/business/${id}`, data);
+        await apiClient.patch(`/business/${id}`, payload, {
+          headers: logoFile ? { 'Content-Type': undefined } : undefined,
+        });
         toast.success('Business updated');
       } else {
-        const res = await apiClient.post('/business', data);
+        const res = await apiClient.post('/business', payload, {
+          headers: logoFile ? { 'Content-Type': undefined } : undefined,
+        });
         toast.success(
           res.data.message || 'Business created with default working hours!'
         );
@@ -168,6 +181,13 @@ const BusinessForm = () => {
             <ImageUpload
               value={logo}
               onChange={(url) => setValue('logo', url, { shouldValidate: true })}
+              onFileChange={setLogoFile}
+              uploadUrl={null}
+              uploadField="logo"
+              responseImageField="logo"
+              removeUrl={id ? `/business/${id}` : null}
+              removeField="deleteLogo"
+              removeMessage="Business logo removed"
               folder="business-logos"
               label="Business Logo"
               aspect="square"

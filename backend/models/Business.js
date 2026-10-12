@@ -73,7 +73,7 @@ const businessSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-businessSchema.index({ slug: 1 });
+// businessSchema.index({ slug: 1 });
 businessSchema.index({ ownerId: 1 });
 
 businessSchema.pre('save', function () {

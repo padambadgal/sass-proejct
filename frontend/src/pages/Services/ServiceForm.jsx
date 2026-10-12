@@ -23,6 +23,7 @@ const ServiceForm = () => {
 
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
 
   const {
     register,
@@ -68,15 +69,26 @@ const ServiceForm = () => {
   const onSubmit = async (data) => {
     setLoading(true);
     try {
+      const payload = imageFile ? new FormData() : data;
+      if (imageFile) {
+        Object.entries(data).forEach(([key, value]) => payload.append(key, value));
+        payload.append('image', imageFile);
+      }
+
       if (id) {
-        await apiClient.patch(`/services/${id}`, data);
+        await apiClient.patch(`/services/${id}`, payload, {
+          headers: imageFile ? { 'Content-Type': undefined } : undefined,
+        });
         toast.success('Service updated');
       } else {
         if (!businessId) {
           toast.error('No business selected. Please go back.');
           return;
         }
-        await apiClient.post('/services', { ...data, businessId });
+        if (imageFile) payload.append('businessId', businessId);
+        await apiClient.post('/services', imageFile ? payload : { ...data, businessId }, {
+          headers: imageFile ? { 'Content-Type': undefined } : undefined,
+        });
         toast.success('Service created');
       }
       navigate('/services');
@@ -134,6 +146,13 @@ const ServiceForm = () => {
             <ImageUpload
               value={image}
               onChange={(url) => setValue('image', url, { shouldValidate: true })}
+              onFileChange={setImageFile}
+              uploadUrl={null}
+              uploadField="image"
+              responseImageField="image"
+              removeUrl={id ? `/services/${id}` : null}
+              removeField="deleteImage"
+              removeMessage="Service image removed"
               folder="service-images"
               label="Service Image"
               aspect="square"

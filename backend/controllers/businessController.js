@@ -7,7 +7,15 @@ import { canCreateBusiness } from '../utils/planLimits.js';
 // POST /api/business  (multipart/form-data OR JSON)
 export const createBusiness = async (req, res) => {
   try {
-    const { name, slug, phone, address, description, email, timezone, bankAccount } = req.body || {};
+    const { name, slug, phone, address: addressValue, description, email, timezone, bankAccount } = req.body || {};
+    let address = addressValue;
+    if (typeof address === 'string') {
+      try {
+        address = JSON.parse(address);
+      } catch {
+        return res.status(400).json({ success: false, message: 'Address must be valid JSON' });
+      }
+    }
 
     console.log('[createBusiness] body:', req.body);
     console.log('[createBusiness] file:', req.file
@@ -151,7 +159,7 @@ export const updateBusiness = async (req, res, next) => {
       : 'NO FILE');
 
     const allowedUpdates = [
-      'name', 'description', 'phone', 'email', 'address',
+      'name', 'description', 'phone', 'email',
       'timezone', 'bankAccount', 'isActive',
     ];
 
@@ -161,6 +169,18 @@ export const updateBusiness = async (req, res, next) => {
         business[field] = req.body[field];
       }
     });
+
+    if (req.body.address !== undefined) {
+      if (typeof req.body.address === 'string') {
+        try {
+          business.address = JSON.parse(req.body.address);
+        } catch {
+          return res.status(400).json({ success: false, message: 'Address must be valid JSON' });
+        }
+      } else {
+        business.address = req.body.address;
+      }
+    }
 
     // Re-activation limit check
     if (!business.isActive && req.body.isActive === true && !(await canCreateBusiness(req.user._id))) {
