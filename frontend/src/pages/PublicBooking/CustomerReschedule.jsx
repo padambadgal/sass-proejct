@@ -39,7 +39,7 @@ const CustomerReschedule = () => {
       setBooking(data);
       setSelectedDate(new Date(data.date));
       setStep('booking');
-      toast.success('Booking verified');
+      toast.success('Email verified');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Booking not found or verification failed');
     } finally {

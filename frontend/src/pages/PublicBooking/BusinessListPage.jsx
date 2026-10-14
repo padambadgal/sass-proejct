@@ -113,12 +113,7 @@ const BusinessListPage = () => {
 
   const handleLogout = async () => {
     setMenuOpen(false);
-    if (logout) {
-      await logout();
-    } else {
-      localStorage.removeItem('authToken');
-    }
-    navigate('/book');
+    await logout();
   };
 
   return (

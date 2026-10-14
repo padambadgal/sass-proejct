@@ -3,7 +3,7 @@ import { Calendar, Users, CreditCard, ArrowRight, CheckCircle } from 'lucide-rea
 import { useAuth } from '../../context/AuthContext';
 
 const Landing = () => {
-  const { isAuthenticated, hasActiveSubscription } = useAuth();
+  const { isAuthenticated, hasActiveSubscription, logout } = useAuth();
 
   return (
     <div className="min-h-screen bg-white">
@@ -32,10 +32,7 @@ const Landing = () => {
                 </Link>
                 
                 <button
-                  onClick={() => {
-                    localStorage.removeItem('authToken');
-                    window.location.href = '/';
-                  }}
+                  onClick={logout}
                   className="text-sm font-medium text-red-600 hover:text-red-700 transition"
                 >
                   Logout

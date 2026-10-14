@@ -80,11 +80,17 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       await apiClient.post('/auth/logout');
-    } catch {}
-    localStorage.removeItem('authToken');
-    setUser(null);
-    setSubscription(null);
-    toast.success('Logged out');
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message ||
+          'Could not contact the server. You have been logged out locally.'
+      );
+    } finally {
+      localStorage.removeItem('authToken');
+      setUser(null);
+      setSubscription(null);
+      window.location.assign('/');
+    }
   };
 
   const value = {

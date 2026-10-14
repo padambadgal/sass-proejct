@@ -1,14 +1,11 @@
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { LogOut, Menu } from 'lucide-react';
 
 const Navbar = ({ sidebarCollapsed, mobileSidebarOpen, onMenuClick }) => {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
 
   const handleLogout = async () => {
     await logout();
-    navigate('/');
   };
 
   return (
