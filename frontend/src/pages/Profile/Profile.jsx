@@ -100,7 +100,7 @@ const Profile = ({ showBack = false }) => {
 
   const savePassword = async (data) => {
     try {
-      await apiClient.patch('/change-password', {
+      await apiClient.patch('/profile/change-password', {
         currentPassword: data.currentPassword,
         newPassword: data.newPassword,
       });

@@ -1,50 +1,48 @@
 import express from 'express';
 import {
-    register,
-    login,
-    logout,
-    getMe,
-    forgotPassword,
-    resetPassword,
+  register,
+  login,
+  logout,
+  getMe,
+  // changePassword,
+  forgotPassword,
+  verifyOtp,
+  resetPassword,
 } from '../controllers/authController.js';
 import { protect } from '../middleware/authMiddleware.js';
-
 import {
-    forgotPasswordValidation,
-    resetPasswordValidation,
-} from '../utils/validationMiddleware.js';
-
-import {
-    registerValidation,
-    loginValidation,
-    validate,
+  registerValidation,
+  loginValidation,
+  validate,
 } from '../middleware/validationMiddleware.js';
 import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
 
-// 🔒 Aggressive rate limit specifically for password reset
+// 🔒 Rate limit for password reset endpoints
 const passwordResetLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 min
-    max: 5,                    // 5 requests per IP per 15 min
-    message: {
-        success: false,
-        message: 'Too many password reset requests. Try again later.',
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: {
+    success: false,
+    message: 'Too many requests. Try again later.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 // Public
 router.post('/register', registerValidation, validate, register);
 router.post('/login', loginValidation, validate, login);
 
-// ✅ Password reset (new, secure flow)
-router.post('/forgot-password', passwordResetLimiter, forgotPasswordValidation, validate, forgotPassword);
-router.post('/reset-password/:token', passwordResetLimiter, resetPasswordValidation, validate, resetPassword);
+// ✅ OTP password reset flow
+router.post('/forgot-password', passwordResetLimiter, forgotPassword);
+router.post('/verify-otp', passwordResetLimiter, verifyOtp);
+router.post('/reset-password', passwordResetLimiter, resetPassword);
 
 // Authenticated
 router.post('/logout', protect, logout);
 router.get('/me', protect, getMe);
+// router.patch('/change-password', protect, changePassword);
 
 export default router;

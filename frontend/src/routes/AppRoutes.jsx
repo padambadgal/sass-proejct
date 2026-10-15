@@ -39,7 +39,8 @@ import SubscriptionStatus from '../pages/Subscription/SubscriptionStatus';
 import MyBookings from '../pages/Customers/MyBookings';
 import ProfileRoute from './ProfileRoute';
 import ForgotPassword from '../pages/Auth/ForgotPassword';
-import ResetPassword from '../pages/Auth/ResetPassword';const AppRoutes = () => {
+// import ResetPassword from '../pages/Auth/ResetPassword';
+const AppRoutes = () => {
   return (
     <BrowserRouter>
       <Routes>
@@ -48,7 +49,7 @@ import ResetPassword from '../pages/Auth/ResetPassword';const AppRoutes = () => 
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password/:token" element={<ResetPassword />} />
+        {/* <Route path="/reset-password/:token" element={<ResetPassword />} /> */}
         <Route path="/register" element={<Register />} />
 
         {/* Customer Booking — public browse */}
