@@ -24,6 +24,7 @@ import publicRoutes from './routes/publicRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
 import { errorHandler } from './middleware/errorMiddleware.js';
+// import { uploadErrorHandler } from "./middleware/uploadErrorHandler.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -40,7 +41,7 @@ app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 // ✅ CORS
 app.use(
   cors({
-    origin: 'http://localhost:5173',
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',
     credentials: true,
   })
 );
@@ -81,21 +82,51 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
-app.use((err, req, res, next) => {
-  console.error('Upload error details:', {
-    message: err.message,
-    http_code: err.http_code,
-    name: err.name,
-    storageErrors: err.storageErrors,
-  });
 
-  res.status(err.http_code || 500).json({
-    success: false,
-    message: err.message || 'Upload failed',
-  });
+app.use((err, req, res, next) => {
+  // Handle known upload errors only.
+  const isUploadError =
+    err.name === "MulterError" ||
+    typeof err.http_code === "number" ||
+    Array.isArray(err.storageErrors);
+
+  if (isUploadError) {
+    // Log details on the server, not in the response.
+    console.error("Upload error:", {
+      name: err.name,
+      message: err.message,
+      http_code: err.http_code,
+    });
+
+    const status =
+      err.code === "LIMIT_FILE_SIZE" ? 413 :
+        err.name === "MulterError" ? 400 :
+          Number.isInteger(err.http_code) &&
+            err.http_code >= 400 &&
+            err.http_code < 500 ? err.http_code :
+            500;
+
+    return res.status(status).json({
+      success: false,
+      message:
+        status === 413
+          ? "Uploaded file is too large"
+          : status === 400
+            ? "Invalid uploaded file"
+            : status === 500
+              ? "Upload failed. Please try again."
+              : "Upload could not be completed",
+    });
+  }
+
+  // Pass all non-upload errors to the standard handler.
+  next(err);
 });
 
-// 404
+
+// app.use(uploadErrorHandler);
+
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -103,7 +134,7 @@ app.use((req, res) => {
   });
 });
 
-// Error handler
+// Standard error handler must be last
 app.use(errorHandler);
 
 server.listen(PORT, () => {

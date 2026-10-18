@@ -39,7 +39,7 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ['owner', 'staff', 'customer'],
+      enum: ['owner', 'customer'],
       default: 'owner', // default for signup
     },
     // For staff — which business they belong to

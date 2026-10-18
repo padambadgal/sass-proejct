@@ -28,6 +28,11 @@ const staffSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    availability: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Availability',
+      default: null,   // if set, overrides business availability
+    },
     services: [
       {
         type: mongoose.Schema.Types.ObjectId,

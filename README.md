@@ -1,6 +1,6 @@
-# AppointSaaS
+# Bookify
 
-AppointSaaS is a full-stack appointment-booking SaaS platform for service businesses such as salons, clinics, gyms, and wellness providers. The project combines a Node.js/Express backend with a React + Vite frontend to support business setup, staff and service management, appointment booking, payment handling, subscriptions, customer tracking, and dashboard analytics.
+Bookify is a full-stack appointment-booking SaaS platform for service businesses such as salons, clinics, gyms, and wellness providers. The project combines a Node.js/Express backend with a React + Vite frontend to support business setup, staff and service management, appointment booking, payment handling, subscriptions, customer tracking, and dashboard analytics.
 
 This repository contains the complete application stack for managing a business-facing scheduling workflow and a public booking experience.
 
@@ -132,11 +132,11 @@ Example configuration values:
 
 ```env
 PORT=3000
-MONGO_URI=mongodb://localhost:27017/appointsaas
+MONGO_URI=mongodb://localhost:27017/Bookify
 JWT_SECRET=your_jwt_secret
 EMAIL_USER=your_email@example.com
 EMAIL_PASS=your_email_password
-EMAIL_FROM=AppointSaaS <your_email@example.com>
+EMAIL_FROM=Bookify <your_email@example.com>
 CLIENT_URL=http://localhost:5173
 ```
 
@@ -225,7 +225,7 @@ This repository is structured as a working SaaS application, but it also include
 
 ## Summary
 
-AppointSaaS is a complete business scheduling platform with:
+Bookify is a complete business scheduling platform with:
 - strong owner dashboard functionality
 - public booking capabilities
 - subscription-based access control

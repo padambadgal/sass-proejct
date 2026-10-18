@@ -311,7 +311,7 @@ const BookingList = () => {
               id="business"
               value={selectedBusinessId}
               onChange={(e) => setSelectedBusinessId(e.target.value)}
-              className="block w-48 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className="block w-48 p-2 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             >
               {businesses.map((b) => (
                 <option key={b._id} value={b._id}>
@@ -324,7 +324,7 @@ const BookingList = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="block w-40 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className="block w-40 rounded-md p-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
@@ -338,7 +338,7 @@ const BookingList = () => {
               selected={dateFilter}
               onChange={setDateFilter}
               dateFormat="yyyy-MM-dd"
-              className="block w-40 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className="block w-40 p-2 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             />
           </div>
         </div>

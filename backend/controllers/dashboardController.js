@@ -70,12 +70,11 @@ export const getOverview = async (req, res) => {
           _id: null,
           total: { $sum: '$totalPrice' }
         }
-      }
+      },
+      { $project: { _id: 0, total: 1 } }
     ]);
 
-    console.log('Revenue agg result:', JSON.stringify(revenueAgg));
     const totalRevenue = revenueAgg.length > 0 ? revenueAgg[0].total : 0;
-    console.log('Total revenue:', totalRevenue);
 
     // Today's bookings (pending, confirmed, completed) across all businesses
     const todayBookings = await Booking.find({

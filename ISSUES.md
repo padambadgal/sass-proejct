@@ -4,27 +4,27 @@ This list records issues confirmed by inspecting the repository source. It is no
 
 ## Critical
 
-1. **Unauthenticated password reset permits account takeover**
+<!-- 1. **Unauthenticated password reset permits account takeover**
    - **Files:** `backend/routes/authRouter.js:16`, `backend/controllers/authController.js:124`
    - `POST /api/auth/forgot-password` is public and accepts an email plus a new password. The handler changes the matching account's password without a reset token, email verification, or current-password check.
    - **Impact:** Anyone who knows a user's email can take over that account.
-   - **Recommended fix:** Require a short-lived, single-use reset token delivered through a verified channel; do not accept a new password until the token is validated.
+   - **Recommended fix:** Require a short-lived, single-use reset token delivered through a verified channel; do not accept a new password until the token is validated. -->
 
 ## High
 
-2. **Authenticated sockets can subscribe to any business booking room**
+<!-- 2. **Authenticated sockets can subscribe to any business booking room**
    - **File:** `backend/config/socket.js:46`
    - The `join:business` handler joins the requested room without checking that the authenticated user owns or is authorized for that business. The server broadcasts booking reference, customer name, service name, date, time, and status to these rooms (`backend/services/notificationService.js:301`).
    - **Impact:** Any authenticated user can subscribe to another business's booking notifications.
-   - **Recommended fix:** Validate business membership/ownership on the server before joining; reject unauthorized room requests.
+   - **Recommended fix:** Validate business membership/ownership on the server before joining; reject unauthorized room requests. -->
 
 ## Medium
 
-3. **CORS only permits localhost**
+<!-- 3. **CORS only permits localhost**
    - **File:** `backend/server.js:43`
    - The HTTP API allows only `http://localhost:5173`, even though the project has a `CLIENT_URL` environment setting and Socket.IO uses it separately.
    - **Impact:** A frontend hosted at a different origin cannot call the API from a browser.
-   - **Recommended fix:** Configure the allowed HTTP origin from a validated environment setting, with local development behavior documented separately.
+   - **Recommended fix:** Configure the allowed HTTP origin from a validated environment setting, with local development behavior documented separately. -->
 
 4. **Catch-all middleware prevents the standard error handler from handling route errors**
    - **File:** `backend/server.js:84`

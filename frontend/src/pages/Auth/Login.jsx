@@ -34,7 +34,6 @@ const Login = () => {
       if (user.role === 'customer') navigate('/book');
       else if (from) navigate(from);
       else if (user.role === 'owner') navigate('/dashboard');
-      else if (user.role === 'staff') navigate('/bookings');
       else navigate('/');
     }
   }, [isAuthenticated, user, navigate, from]);
@@ -45,7 +44,6 @@ const Login = () => {
       if (result.user.role === 'customer') navigate('/book');
       else if (from) navigate(from);
       else if (result.user.role === 'owner') navigate('/dashboard');
-      else if (result.user.role === 'staff') navigate('/bookings');
       else navigate('/');
     }
   };

@@ -40,7 +40,6 @@ const Register = () => {
   useEffect(() => {
     if (isAuthenticated && user) {
       if (user.role === 'customer') navigate('/book');
-      else if (user.role === 'staff') navigate('/bookings');
       else if (planParam) navigate(`/checkout?plan=${planParam}`);
       else navigate('/dashboard');
     }

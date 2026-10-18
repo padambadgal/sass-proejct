@@ -50,24 +50,9 @@ const ownerSections = [
   },
 ];
 
-const staffSections = [
-  {
-    title: 'Workspace',
-    items: [
-      {
-        to: '/bookings',
-        label: 'Bookings',
-        icon: CalendarDays,
-        badgeKey: 'bookings',
-      },
-      { to: '/customers', label: 'Customers', icon: UserRound },
-    ],
-  },
-];
-
 // ============ SIDEBAR ============
 const Sidebar = ({ collapsed, setCollapsed, mobileOpen = false, onClose }) => {
-  const { user, logout, isStaff } = useAuth();
+  const { user, logout } = useAuth();
   const { unreadCount } = useSocket();
   const location = useLocation();
 
@@ -76,8 +61,6 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen = false, onClose }) => {
     if (mobileOpen && onClose) onClose();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
-
-  const sections = isStaff ? staffSections : ownerSections;
 
   // Badge counts
   const badges = {
@@ -122,7 +105,7 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen = false, onClose }) => {
                   <span className="text-indigo-600">SaaS</span>
                 </span>
                 <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">
-                  {isStaff ? 'Staff Portal' : 'Owner Portal'}
+                  Owner Portal
                 </span>
               </div>
             )}
@@ -163,7 +146,7 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen = false, onClose }) => {
 
         {/* ===== Nav Sections ===== */}
         <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 space-y-6 scrollbar-thin">
-          {sections.map((section) => (
+          {ownerSections.map((section) => (
             <div key={section.title}>
               {/* Section title */}
               {!collapsed && (

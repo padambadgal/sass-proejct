@@ -153,12 +153,12 @@ const BusinessListPage = () => {
                   <UserCircle size={18} />
                   <span className="hidden sm:inline">Profile</span>
                 </Link>
-                <button
+                <Link
                   onClick={handleLogout}
                   className="text-sm font-medium text-red-600 hover:text-red-700 transition"
                 >
                   Logout
-                </button>
+                </Link>
               </>
             ) : (
               <>
@@ -306,7 +306,7 @@ const BusinessListPage = () => {
 
         {/* Footer hint */}
         <div className="absolute bottom-4 left-0 right-0 px-4 text-center text-xs text-gray-400">
-          © {new Date().getFullYear()} AppointSaaS
+          © {new Date().getFullYear()} Bookify
         </div>
       </aside>
 

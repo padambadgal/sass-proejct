@@ -40,7 +40,7 @@ export const createBooking = async (req, res) => {
       startTime,
       customer,
       notes,
-      staffId,
+      staffId: staffId || null,
       bookedBy: 'owner',
     });
 

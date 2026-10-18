@@ -246,7 +246,7 @@ const ServiceList = () => {
               id="business"
               value={selectedBusinessId}
               onChange={(e) => setSelectedBusinessId(e.target.value)}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:w-48"
+              className="block w-full p-2  rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:w-48"
             >
               {businesses.map((b) => (
                 <option key={b._id} value={b._id}>

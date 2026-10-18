@@ -105,7 +105,6 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!user,
     hasActiveSubscription: subscription?.status === 'active',
     isOwner: user?.role === 'owner',
-    isStaff: user?.role === 'staff',
     isCustomer: user?.role === 'customer',
   };
 

@@ -108,7 +108,7 @@ const MyBookings = () => {
                           {canReschedule && (
                             <button
                               onClick={() => handleReschedule(b)}
-                              className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1"
+                              className="text-indigo-600 cursor-pointer hover:text-indigo-900 flex items-center gap-1"
                             >
                               <RefreshCw size={16} /> Reschedule
                             </button>
@@ -149,7 +149,7 @@ const MyBookings = () => {
                     {canReschedule && (
                       <button
                         onClick={() => handleReschedule(b)}
-                        className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                        className="flex items-center gap-1 cursor-pointer text-sm text-indigo-600 hover:text-indigo-800 font-medium"
                       >
                         <RefreshCw size={16} /> Reschedule
                       </button>

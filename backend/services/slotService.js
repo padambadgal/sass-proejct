@@ -17,6 +17,11 @@ const minutesToTime = (m) => {
 
 const intervalsOverlap = (s1, e1, s2, e2) => s1 < e2 && s2 < e1;
 
+
+const dayBoundary = (dateStr) => ({
+  start: new Date(dateStr + 'T00:00:00Z'),
+  end: new Date(dateStr + 'T23:59:59.999Z'),
+});
 /**
  * Generate available slots (returns plain array of "HH:MM")
  */
@@ -24,19 +29,24 @@ export const generateAvailableSlots = async (
   businessId,
   serviceId,
   dateStr,
-  overrideDuration = null
+  overrideDuration = null,
+  staffId = null
 ) => {
-  const cacheKey = `slots:${businessId}:${serviceId}:${dateStr}:${overrideDuration || 'default'}`;
+  // ---------- Cache key includes staffId ----------
+  const cacheKey = `slots:${businessId}:${serviceId}:${dateStr}:${overrideDuration || 'default'}:${staffId || 'any'}`;
   const cached = await cacheGet(cacheKey);
   if (cached) return cached;
 
+  // ---------- Validate service ----------
   const service = await Service.findOne({ _id: serviceId, status: 'active' });
   if (!service) throw new Error('Service not found or inactive');
   const duration = overrideDuration || service.duration;
 
+  // ---------- Validate business ----------
   const business = await Business.findOne({ _id: businessId, isActive: true });
   if (!business) throw new Error('Business not found or inactive');
 
+  // ---------- Day-of-week availability ----------
   const dateObj = new Date(dateStr + 'T00:00:00Z');
   const dayOfWeek = dateObj.getUTCDay();
 
@@ -54,20 +64,31 @@ export const generateAvailableSlots = async (
     end: timeToMinutes(br.end),
   }));
 
-  const startOfDay = new Date(dateStr + 'T00:00:00Z');
-  const endOfDay = new Date(dateStr + 'T23:59:59.999Z');
+  // ---------- Fetch bookings for the day ----------
+  const { start, end } = dayBoundary(dateStr);
 
-  const existingBookings = await Booking.find({
+  const bookingFilter = {
     businessId,
-    date: { $gte: startOfDay, $lte: endOfDay },
+    date: { $gte: start, $lte: end },
     status: { $in: ['pending', 'confirmed'] },
-  }).lean();
+  };
+
+  // ✅ If a specific staff is selected, only block that staff's slots.
+  // Otherwise (single-provider / no staff chosen), block all business slots.
+  if (staffId) {
+    bookingFilter.staffId = staffId;
+  }
+
+  const existingBookings = await Booking.find(bookingFilter)
+    .select('startTime endTime staffId')
+    .lean();
 
   const bookingIntervals = existingBookings.map((b) => ({
     start: timeToMinutes(b.startTime),
     end: timeToMinutes(b.endTime),
   }));
 
+  // ---------- Generate slots ----------
   const stepMinutes = 15;
   const slots = [];
   let candidate = startMinutes;
@@ -76,16 +97,17 @@ export const generateAvailableSlots = async (
     const overlapsBreak = breakIntervals.some((br) =>
       intervalsOverlap(candidate, candidate + duration, br.start, br.end)
     );
+
     if (!overlapsBreak) {
       const overlapsBooking = bookingIntervals.some((bk) =>
         intervalsOverlap(candidate, candidate + duration, bk.start, bk.end)
       );
       if (!overlapsBooking) slots.push(minutesToTime(candidate));
     }
+
     candidate += stepMinutes;
   }
 
-  // Cache for 2 minutes (short — availability changes often)
   await cacheSet(cacheKey, slots, 120);
   return slots;
 };
@@ -93,13 +115,13 @@ export const generateAvailableSlots = async (
 /**
  * Wrapper that accepts optional duration override
  */
-export const getAvailableSlotTimes = async (
-  businessId,
-  serviceId,
-  dateStr,
-  overrideDuration = null
-) => {
-  return await generateAvailableSlots(businessId, serviceId, dateStr, overrideDuration);
+export const getAvailableSlotTimes = async (businessId, serviceId, dateStr, overrideDuration = null, staffId = null) => {
+  return generateAvailableSlots(
+    businessId,
+    serviceId,
+    dateStr,
+    overrideDuration,
+    staffId);
 };
 
 /**
@@ -128,15 +150,21 @@ export const isDateInPast = (dateStr, timeZone = 'Asia/Kolkata') => {
   return dateStr < today;
 };
 
-export const filterPastSlots = (slots, dateStr, timeZone = 'Asia/Kolkata') => {
-  const { date: today, minutes: currentMinutes } = getDateTimeInTimezone(timeZone);
+export const filterPastSlots = (slots, dateStr) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const givenDate = new Date(dateStr + 'T00:00:00Z');
 
-  if (dateStr < today) return [];
-  if (dateStr === today) {
+  if (givenDate < today) return [];
+
+  if (givenDate.getTime() === today.getTime()) {
+    const now = new Date();
+    const currentMin = now.getHours() * 60 + now.getMinutes();
     return slots.filter((slot) => {
-      const [hours, minutes] = slot.split(':').map(Number);
-      return hours * 60 + minutes > currentMinutes;
+      const [h, m] = slot.split(':').map(Number);
+      return h * 60 + m >= currentMin;
     });
   }
+
   return slots;
 };

@@ -147,20 +147,17 @@ export const getPublicAvailability = async (req, res) => {
 export const getPublicSlots = async (req, res) => {
   try {
     const { slug } = req.params;
-    const { serviceIds, duration, date } = req.query;
+    const { serviceIds, duration, date, staffId } = req.query;
 
     if (!serviceIds || !date) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide serviceIds and date as query parameters',
+        message: 'Please provide serviceIds and date',
       });
     }
 
     const business = await findBusinessBySlug(slug);
     const serviceIdArray = serviceIds.split(',').filter((id) => id.trim());
-    if (serviceIdArray.length === 0) {
-      return res.status(400).json({ success: false, message: 'Invalid serviceIds format' });
-    }
 
     const services = await Service.find({
       _id: { $in: serviceIdArray },
@@ -171,26 +168,29 @@ export const getPublicSlots = async (req, res) => {
     if (services.length !== serviceIdArray.length) {
       return res.status(404).json({
         success: false,
-        message: 'One or more services not found for this business',
+        message: 'One or more services not found',
       });
     }
 
-    const totalDuration =
-      duration ? parseInt(duration) : services.reduce((s, sv) => s + sv.duration, 0);
+    const totalDuration = duration
+      ? parseInt(duration)
+      : services.reduce((s, sv) => s + sv.duration, 0);
 
-    const firstServiceId = serviceIdArray[0];
+    // ✅ Pass staffId (may be null for single-provider businesses)
     let slots = await generateAvailableSlots(
       business._id,
-      firstServiceId,
+      serviceIdArray[0],
       date,
-      totalDuration // ✅ pass duration
+      totalDuration,
+      staffId || null
     );
-    slots = filterPastSlots(slots, date, business.timezone);
+    slots = filterPastSlots(slots, date);
 
     res.status(200).json({
       success: true,
       data: {
         date,
+        staffId: staffId || null,
         serviceIds: serviceIdArray,
         serviceNames: services.map((s) => s.name),
         totalDuration,

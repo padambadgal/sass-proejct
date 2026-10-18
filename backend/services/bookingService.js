@@ -52,7 +52,7 @@ export const createBooking = async (bookingData) => {
 
     // 6. Check slot availability using duration
     const availableSlots = filterPastSlots(
-      await getAvailableSlotTimes(businessId, serviceId, date),
+      await getAvailableSlotTimes(businessId, serviceId, null, staffId || null, date),
       date,
       business.timezone
     );

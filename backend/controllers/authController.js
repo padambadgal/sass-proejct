@@ -56,7 +56,7 @@ export const register = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      role: ['owner', 'staff', 'customer'].includes(role) ? role : 'owner',
+      role: ['owner', 'customer'].includes(role) ? role : 'owner',
       phone: phone || '',
     });
 
@@ -180,7 +180,7 @@ export const forgotPassword = async (req, res) => {
             <h2 style="color:#111827;margin:0 0 8px;">Password Reset Code</h2>
             <p style="color:#374151;">Hi ${user.name || 'there'},</p>
             <p style="color:#374151;">
-              Use the code below to reset your AppointSaaS password.
+              Use the code below to reset your Bookify password.
               It expires in <strong>${OTP_EXPIRY_MINUTES} minutes</strong>.
             </p>
             <div style="text-align:center;margin:28px 0;">

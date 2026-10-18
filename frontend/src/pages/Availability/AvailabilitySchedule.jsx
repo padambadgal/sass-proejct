@@ -324,7 +324,7 @@ const AvailabilitySchedule = () => {
               id="business"
               value={selectedBusinessId}
               onChange={handleBusinessChange}
-              className="block w-48 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className="block w-48 p-2 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             >
               {businesses.map((b) => (
                 <option key={b._id} value={b._id}>
